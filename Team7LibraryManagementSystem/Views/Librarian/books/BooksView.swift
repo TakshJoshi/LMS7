@@ -140,6 +140,7 @@ struct BooksView: View {
             
             books = documents.compactMap { document -> Book? in
                 let data = document.data()
+                
                 return Book(
                     id: document.documentID,
                     title: data["title"] as? String ?? "",

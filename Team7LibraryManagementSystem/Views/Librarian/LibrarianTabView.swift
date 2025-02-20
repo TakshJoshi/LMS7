@@ -30,10 +30,7 @@ struct LibrarianTabView: View {
                         Label("Users", systemImage: "person")
                     }
                 
-                libHistoryView()
-                    .tabItem {
-                        Label("History", systemImage: "clock")
-                    }
+                
             }
         }
 }

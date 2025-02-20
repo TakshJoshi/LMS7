@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct EventsView: View {
+struct libEventsView: View {
     @State private var selectedFilter: String = "All"
     let filters = ["All", "Workshops", "Book Clubs", "Lectures"]
     

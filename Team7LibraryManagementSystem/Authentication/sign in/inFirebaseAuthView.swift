@@ -7,7 +7,7 @@
 import SwiftUI
 import FirebaseAuth
 import Network
-
+import FirebaseFirestore
 struct FirebaseAuthView: View {
     let userRole: String
     @State private var email: String = ""
@@ -117,47 +117,79 @@ struct FirebaseAuthView: View {
     }
     
     private func loginUser() {
-        guard networkMonitor.isConnected else {
-            showNetworkAlert = true
-            return
-        }
-        
-        isAuthenticating = true
-        errorMessage = nil
-        
-        FirebaseAuthManager.shared.signIn(email: email, password: password) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let role):
-//                    if role.lowercased() == userRole {
-                        // Both admin and librarian go through 2FA
-                        FirebaseManager.shared.generateAndSendOTP(email: email) { success, message in
-                            if success {
-                                // Store the role to know where to navigate after 2FA
-                                UserDefaults.standard.set(role, forKey: "userRole")
-                                print(userRole)
-                                navigateTo2FA = true
+            guard networkMonitor.isConnected else {
+                showNetworkAlert = true
+                return
+            }
+            
+            isAuthenticating = true
+            errorMessage = nil
+            
+            FirebaseAuthManager.shared.signIn(email: email, password: password) { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let role):
+                        let lowercasedRole = role.lowercased()
+                        let selectedRole = userRole.lowercased()
+                        
+                        // Verify email exists in the correct role table
+                        verifyUserRole(email: email, role: selectedRole) { isValid, message in
+                            if isValid {
+                                // Generate OTP for 2FA
+                                FirebaseManager.shared.generateAndSendOTP(email: email) { success, otpMessage in
+                                    if success {
+                                        UserDefaults.standard.set(role, forKey: "userRole")
+                                        navigateTo2FA = true
+                                    } else {
+                                        errorMessage = otpMessage
+                                    }
+                                    isAuthenticating = false
+                                }
                             } else {
+                                isAuthenticating = false
                                 errorMessage = message
                             }
-                            isAuthenticating = false
                         }
-//                    } else {
-//                        isAuthenticating = false
-//                        errorMessage = "Access denied: Invalid role for this login"
-//                    }
-                    
-                case .failure(let error):
-                    isAuthenticating = false
-                    if (error as NSError).code == -1009 {
-                        showNetworkAlert = true
-                    } else {
-                        errorMessage = "Invalid Credentials"
+
+                    case .failure(let error):
+                        isAuthenticating = false
+                        if (error as NSError).code == -1009 {
+                            showNetworkAlert = true
+                        } else {
+                            errorMessage = "Invalid Credentials"
+                        }
                     }
                 }
             }
         }
-    }
+
+        
+        func verifyUserRole(email: String, role: String, completion: @escaping (Bool, String) -> Void) {
+            let collectionName: String
+            
+            switch role {
+            case "admin":
+                collectionName = "admins"
+            case "librarian":
+                collectionName = "librarians"
+            case "user":
+                collectionName = "users"
+            default:
+                completion(false, "Invalid role selection")
+                return
+            }
+            
+            let db = Firestore.firestore()
+            db.collection(collectionName).whereField("email", isEqualTo: email).getDocuments { snapshot, error in
+                if let error = error {
+                    completion(false, "Error checking role: \(error.localizedDescription)")
+                } else if let snapshot = snapshot, !snapshot.documents.isEmpty {
+                    completion(true, "")
+                } else {
+                    completion(false, "Access denied: Email does not belong to the selected role")
+                }
+            }
+        }
     
     @MainActor
     //    private func resetPassword() {

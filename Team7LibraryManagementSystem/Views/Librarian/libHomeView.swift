@@ -85,26 +85,21 @@ struct libHomeView: View {
                     // Active Users
                     StatCard2(
                         icon: "person.2.fill",
-                        iconColor: .green,
+                        iconColor: .blue,
                         title: "\(activeUsers)",
                         subtitle: "Active Users"
                     )
                     
                     // Total Fine
                     StatCard2(
-                        icon: "creditcard.fill",
-                        iconColor: .orange,
-                        title: "Total Fine",
-                        subtitle: ""
+                        icon: "dollarsign.circle.fill",
+                        iconColor: .blue,
+                        title: "$123",
+                        subtitle: "Total Fine"
                     )
                     
                     // Issue Book
-                    StatCard2(
-                        icon: "plus",
-                        iconColor: .blue,
-                        title: "Issue Book",
-                        subtitle: ""
-                    )
+                    IssueBookCard()
                 }
                 .padding(.horizontal)
                 
@@ -158,6 +153,7 @@ struct libHomeView: View {
             guard let documents = snapshot?.documents else { return }
             self.books = documents.compactMap { document -> Book? in
                 let data = document.data()
+                            
                 return Book(
                     id: document.documentID,
                     title: data["title"] as? String ?? "",
@@ -309,7 +305,25 @@ struct LibraryActivity: Identifiable {
     }
 }
 
-
+struct IssueBookCard: View {
+    var body: some View {
+        NavigationLink(destination: IssuedBooksView()) {
+            VStack(alignment: .leading, spacing: 8) {
+                Image(systemName: "plus")
+                    .foregroundColor(.blue)
+                
+                Text("Issue Book")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
+            .background(Color.gray.opacity(0.1))
+            .cornerRadius(12)
+        }
+    }
+}
 #Preview {
     libHomeView()
 }

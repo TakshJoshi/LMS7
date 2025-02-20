@@ -9,7 +9,9 @@ import Foundation
 
 // Models for Google Books API
 struct GoogleBooksResponse: Codable {
-    let items: [Volume]
+    let kind: String?
+    let totalItems: Int?
+    let items: [Volume]?
 }
 
 struct Volume: Codable {
@@ -28,6 +30,12 @@ struct VolumeInfo: Codable {
     let imageLinks: ImageLinks?
     let language: String?
     let industryIdentifiers: [IndustryIdentifier]?
+    
+    private enum CodingKeys: String, CodingKey {
+        case title, authors, publisher, publishedDate, description
+        case pageCount, categories, imageLinks, language
+        case industryIdentifiers
+    }
 }
 
 struct ImageLinks: Codable {
@@ -41,7 +49,7 @@ struct IndustryIdentifier: Codable {
 }
 
 // Model for Library Book
-// Model for Library Book
+
 struct Book: Identifiable {
     let id: String
     let title: String
@@ -72,5 +80,43 @@ struct Book: Identifiable {
             return nil
         }
         return url
+    }
+}
+
+// For issued books tracking
+struct IssuedBook: Identifiable {
+    let id: String
+    let title: String
+    let authors: [String]
+    let coverImageUrl: String?
+    let dueDate: Date
+    let status: String
+    let borrowerId: String
+    
+    var daysLeft: Int {
+        Calendar.current.dateComponents([.day], from: Date(), to: dueDate).day ?? 0
+    }
+    
+    var isOverdue: Bool {
+        daysLeft < 0
+    }
+    
+    var formattedDueDate: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d, yyyy"
+        return formatter.string(from: dueDate)
+    }
+    
+    // Convert from Book to IssuedBook
+    static func fromBook(_ book: Book, dueDate: Date, borrowerId: String) -> IssuedBook {
+        IssuedBook(
+            id: book.id,
+            title: book.title,
+            authors: book.authors,
+            coverImageUrl: book.coverImageUrl,
+            dueDate: dueDate,
+            status: "borrowed",
+            borrowerId: borrowerId
+        )
     }
 }
