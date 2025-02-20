@@ -79,7 +79,9 @@ struct AddBookView: View {
         searchResults.removeAll()
         
         let query = searchQuery.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        let urlString = "https://www.googleapis.com/books/v1/volumes?q=\(query)&key=YOUR_API_KEY"  // Add your API key
+        // Replace YOUR_API_KEY with your actual Google Books API key
+        let apiKey = "AIzaSyDwgO5fIGJSI_0D9dw-KW82ylbn40AL9Eo"
+        let urlString = "https://www.googleapis.com/books/v1/volumes?q=\(query)&key=\(apiKey)"
         
         guard let url = URL(string: urlString) else {
             isSearching = false
@@ -104,23 +106,21 @@ struct AddBookView: View {
                     return
                 }
                 
-                // Print the raw response for debugging
-                if let jsonString = String(data: data, encoding: .utf8) {
-                    print("Raw API Response:", jsonString)
+                // First check for API error response
+                if let errorResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let error = errorResponse["error"] as? [String: Any],
+                   let message = error["message"] as? String {
+                    self.isSearching = false
+                    self.errorMessage = message
+                    self.showAlert = true
+                    return
                 }
                 
                 do {
                     let decoder = JSONDecoder()
                     let response = try decoder.decode(GoogleBooksResponse.self, from: data)
-                    
-                    guard let items = response.items else {
-                        self.searchResults = []
-                        self.isSearching = false
-                        return
-                    }
-                    
-                    self.searchResults = items.compactMap { volume in
-                        return Book(
+                    self.searchResults = (response.items ?? []).map { volume in
+                        Book(
                             id: volume.id,
                             title: volume.volumeInfo.title,
                             authors: volume.volumeInfo.authors ?? [],
@@ -144,18 +144,6 @@ struct AddBookView: View {
                     self.isSearching = false
                 } catch {
                     print("Decoding error:", error)
-                    if let decodingError = error as? DecodingError {
-                        switch decodingError {
-                        case .keyNotFound(let key, _):
-                            print("Missing key:", key)
-                        case .valueNotFound(let type, _):
-                            print("Missing value of type:", type)
-                        case .typeMismatch(let type, _):
-                            print("Type mismatch for type:", type)
-                        default:
-                            print("Other decoding error:", decodingError)
-                        }
-                    }
                     self.isSearching = false
                     self.errorMessage = "Failed to parse response. Please try again."
                     self.showAlert = true

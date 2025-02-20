@@ -9,7 +9,7 @@ import SwiftUI
 import FirebaseFirestore
 
 struct BooksView: View {
-    @State private var books: [Book] = []
+    @State  var books: [Book] = []
     @State private var searchText = ""
     @State private var showingAddBook = false
     @State private var isShowingFilter = false
@@ -120,7 +120,7 @@ struct BooksView: View {
         }
     }
     
-    private func fetchBooks() {
+     func fetchBooks() {
         isLoading = true
         errorMessage = nil
         

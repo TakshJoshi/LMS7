@@ -2,6 +2,7 @@
 
 
 import SwiftUI
+import FirebaseFirestore
 
 struct UserHomeView: View {
     var body: some View {
@@ -42,20 +43,22 @@ struct UserHomeView: View {
     }
 }
 
-struct HomeScreen: View {
-    
-    @State private var searchText = ""
-    var body: some View {
+import SwiftUI
+import FirebaseFirestore
 
+struct HomeScreen: View {
+    @StateObject private var booksViewModel = BooksViewModel()
+    @State private var searchText = ""
+    
+    var body: some View {
         ScrollView {
-          
             VStack(alignment: .leading, spacing: 12) {
                 // Search Bar
                 HStack {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(.gray)
                         .padding(.leading, 10)
-                    
+
                     TextField("Search", text: $searchText)
                         .padding(5)
                 }
@@ -64,67 +67,230 @@ struct HomeScreen: View {
                 .cornerRadius(10)
                 .padding(.horizontal)
 
-                SectionHeader(title: "Books You May Like")
+                // Books You May Like Section
+                if booksViewModel.isLoading {
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                } else {
+                    BooksSection(
+                        title: "Books You May Like",
+                        books: recommendedBooks
+                    )
 
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        NavigationLink(destination: UserBookDetailView(title: "The Silent Echo", author: "Sarah Mitchell")) {
-                            UserBookCard(imageName: "book1", title: "The Silent Echo", author: "Sarah Mitchell", description: "A gripping tale of mystery and self-")
-                        }
-
-                        NavigationLink(destination: UserBookDetailView(title: "Book Title 2", author: "Author Name")) {
-                            UserBookCard(imageName: "book2", title: "Book Title 2", author: "Author Name", description: "Short book description here")
-                        }
-                    }
-                    .padding(.horizontal)
-                }
-
-                QuoteCard(text: "A reader lives a thousand lives before he dies.", author: "George R.R. Martin")
+                    QuoteCard(
+                        text: "A reader lives a thousand lives before he dies.",
+                        author: "George R.R. Martin"
+                    )
                     .padding(.horizontal)
 
-                SectionHeader(title: "Trending Books")
-
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        NavigationLink(destination: UserBookDetailView(title: "Ocean's Whisper", author: "Michael Chen")) {
-                            UserBookCard(imageName: "book3", title: "Ocean's Whisper", author: "Michael Chen", description: "A poetic journey through the")
-                        }
-
-                        NavigationLink(destination: UserBookDetailView(title: "Book Title 4", author: "Author Name")) {
-                            UserBookCard(imageName: "book4", title: "Book Title 4", author: "Author Name", description: "Short book description here")
-                        }
-                    }
-                    .padding(.horizontal)
+                    // Trending Books Section
+                    BooksSection(
+                        title: "Trending Books",
+                        books: trendingBooks
+                    )
                 }
             }
             .padding(.top)
+            .onAppear {
+                booksViewModel.fetchBooks()
+            }
+            .navigationTitle("HOME")
         }
-        .navigationTitle("HOME")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                HStack {
-                    Button(action: {
-                        // Handle notifications action
-                    }) {
-                        Image(systemName: "bell")
-                            .font(.title2)
-                            .foregroundColor(.blue)
-                    }
+    }
+    
+    // Computed property for recommended books
+    private var recommendedBooks: [Book] {
+        // You can implement more sophisticated recommendation logic
+        return booksViewModel.books.shuffled().prefix(5).map { $0 }
+    }
+    
+    // Computed property for trending books
+    private var trendingBooks: [Book] {
+        // Sort by total checkouts or implement more complex trending logic
+        return booksViewModel.books
+            .sorted { $0.totalCheckouts > $1.totalCheckouts }
+            .prefix(5)
+            .map { $0 }
+    }
+}
 
-                    Button(action: {
-                        // Handle profile action (Navigate to Profile Screen)
-                    }) {
-                        Image(systemName: "person.circle")
-                            .font(.title2)
-                            .foregroundColor(.blue)
+// Books Section View
+struct BooksSection: View {
+    let title: String
+    let books: [Book]
+    
+    var body: some View {
+        VStack(alignment: .leading) {
+            SectionHeader(title: title)
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(books) { book in
+                        NavigationLink(destination: UserBookDetailView(book: book)) {
+                            UserBookCard(book: book)
+                        }
                     }
                 }
+                .padding(.horizontal)
             }
         }
     }
 }
 
+// Books View Model
+class BooksViewModel: ObservableObject {
+    @Published var books: [Book] = []
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+    
+    func fetchBooks() {
+        isLoading = true
+        errorMessage = nil
+        
+        let db = Firestore.firestore()
+        db.collection("books").getDocuments { [weak self] (snapshot, error) in
+            guard let self = self else { return }
+            
+            self.isLoading = false
+            
+            if let error = error {
+                self.errorMessage = "Error fetching books: \(error.localizedDescription)"
+                return
+            }
+            
+            guard let documents = snapshot?.documents else {
+                self.errorMessage = "No books found"
+                return
+            }
+            
+            self.books = documents.compactMap { document -> Book? in
+                let data = document.data()
+                
+                return Book(
+                    id: document.documentID,
+                    title: data["title"] as? String ?? "",
+                    authors: data["authors"] as? [String] ?? [],
+                    publisher: data["publisher"] as? String,
+                    publishedDate: data["publishedDate"] as? String,
+                    description: data["description"] as? String,
+                    pageCount: data["pageCount"] as? Int,
+                    categories: data["categories"] as? [String],
+                    coverImageUrl: data["coverImageUrl"] as? String,
+                    isbn13: data["isbn13"] as? String,
+                    language: data["language"] as? String,
+                    
+                    quantity: data["quantity"] as? Int ?? 0,
+                    availableQuantity: data["availableQuantity"] as? Int ?? 0,
+                    location: data["location"] as? String ?? "",
+                    status: data["status"] as? String ?? "available",
+                    totalCheckouts: data["totalCheckouts"] as? Int ?? 0,
+                    currentlyBorrowed: data["currentlyBorrowed"] as? Int ?? 0,
+                    isAvailable: data["isAvailable"] as? Bool ?? true
+                )
+            }
+        }
+    }
+}
+
+// Updated UserBookDetailView to take a Book
+struct UserBookDetailView: View {
+    let book: Book
+    @State private var isLiked = false
+    
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                // Book Cover
+                if let coverImageUrl = book.coverImageUrl,
+                   let url = URL(string: coverImageUrl) {
+                    AsyncImage(url: url) { image in
+                        image.resizable()
+                            .aspectRatio(contentMode: .fit)
+                    } placeholder: {
+                        ProgressView()
+                    }
+                    .frame(height: 300)
+                    .cornerRadius(10)
+                }
+                
+                // Book Title and Author
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(book.title)
+                        .font(.title)
+                        .fontWeight(.bold)
+                    
+                    Text(book.authors.joined(separator: ", "))
+//                        .font(.subtitle)
+                        .foregroundColor(.secondary)
+                }
+                
+                // Book Details
+                VStack(alignment: .leading, spacing: 10) {
+                    DetailRow(icon: "book", label: "ISBN", value: book.isbn13 ?? "N/A")
+                    DetailRow(icon: "calendar", label: "Published", value: book.publishedDate ?? "N/A")
+                    DetailRow(icon: "doc.text", label: "Pages", value: "\(book.pageCount ?? 0)")
+                    DetailRow(icon: "location", label: "Location", value: book.location)
+                }
+                
+                // Description
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Description")
+                        .font(.headline)
+                    
+                    Text(book.description ?? "No description available")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                }
+                
+                // Action Buttons
+                HStack {
+                    Button(action: { isLiked.toggle() }) {
+                        Image(systemName: isLiked ? "heart.fill" : "heart")
+                            .foregroundColor(isLiked ? .red : .gray)
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .cornerRadius(10)
+                    }
+                    
+                    Spacer()
+                    
+                    Button(action: {}) {
+                        Text("Borrow")
+                            .foregroundColor(.white)
+                            .padding()
+                            .background(Color.blue)
+                            .cornerRadius(10)
+                    }
+                }
+            }
+            .padding()
+        }
+        .navigationTitle(book.title)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// Helper Detail Row View
+struct DetailRow: View {
+    let icon: String
+    let label: String
+    let value: String
+    
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .foregroundColor(.blue)
+                .frame(width: 25)
+            
+            Text("\(label):")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            
+            Text(value)
+                .font(.subheadline)
+        }
+    }
+}
 struct SectionHeader: View {
     let title: String
     var body: some View {
@@ -135,20 +301,22 @@ struct SectionHeader: View {
 }
 
 struct UserBookCard: View {
-    let imageName: String
-    let title: String
-    let author: String
-    let description: String
+    let book: Book
+    @State private var isLiked = false // Track heart status
 
-    @State private var isLiked = false // State to track heart status
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             ZStack(alignment: .topTrailing) {
-                Image(imageName)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 140, height: 160)
-                    .cornerRadius(10)
+                AsyncImage(url: URL(string: book.coverImageUrl ?? "")) { image in
+                    image.resizable()
+                } placeholder: {
+                    Image(systemName: "book.closed")
+                        .resizable()
+                        .foregroundColor(.gray)
+                }
+                .scaledToFit()
+                .frame(width: 140, height: 160)
+                .cornerRadius(10)
 
                 // Like Button
                 Button(action: {
@@ -164,16 +332,18 @@ struct UserBookCard: View {
             }
             .frame(maxWidth: .infinity, alignment: .topTrailing)
 
-            Text(title)
+            Text(book.title)
                 .font(.headline)
                 .foregroundColor(.primary)
                 .lineLimit(1)
+           
+            if let author = book.authors.first {
+                Text(author)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
 
-            Text(author)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-
-            Text(description)
+            Text(book.description ?? "No description available")
                 .font(.footnote)
                 .foregroundColor(.gray)
                 .lineLimit(2)
@@ -188,13 +358,20 @@ struct UserBookCard: View {
     }
 }
 
+func printBooks(){
+    
+}
+
+
+//
+
 struct MyBooksScreen: View {
     var body: some View {
         VStack {
             Text("My Books")
                 .font(.largeTitle)
             
-            NavigationLink(destination: UserBookDetailView(title: "Book 1", author: "Author 1")) {
+            NavigationLink(destination: UserBookDetailView2(title: "Book 1", author: "Author 1")) {
                 Text("Go to Book Detail")
                     .foregroundColor(.blue)
                     .padding()
@@ -252,7 +429,7 @@ struct EventsScreen: View {
 }
 
 // Book Detail Screen
-struct UserBookDetailView: View {
+struct UserBookDetailView2: View {
     let title: String
     let author: String
 

@@ -312,7 +312,7 @@ struct IssueBookCard: View {
                 Image(systemName: "plus")
                     .foregroundColor(.blue)
                 
-                Text("Issue Book")
+                Text("Issued Book")
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundColor(.primary)
