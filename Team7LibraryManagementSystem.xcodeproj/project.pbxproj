@@ -6,6 +6,16 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		4534B7062D647D7B0003102E /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = 4534B7052D647D6C0003102E /* .gitignore */; };
+		458024352D64A87500D5CD6D /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 458024342D64A87500D5CD6D /* FirebaseStorage */; };
+		94F436882D624A1700A6C17E /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 94F436872D624A1700A6C17E /* FirebaseAnalytics */; };
+		94F4368A2D624A1700A6C17E /* FirebaseAnalyticsWithoutAdIdSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 94F436892D624A1700A6C17E /* FirebaseAnalyticsWithoutAdIdSupport */; };
+		94F4368C2D624A1700A6C17E /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 94F4368B2D624A1700A6C17E /* FirebaseAuth */; };
+		94F4368E2D624A1700A6C17E /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 94F4368D2D624A1700A6C17E /* FirebaseFirestore */; };
+		94F436912D624A8100A6C17E /* SwiftSMTP in Frameworks */ = {isa = PBXBuildFile; productRef = 94F436902D624A8100A6C17E /* SwiftSMTP */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		94F436682D62492C00A6C17E /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -24,6 +34,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		4534B7052D647D6C0003102E /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 		94F436572D62492900A6C17E /* Team7LibraryManagementSystem.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Team7LibraryManagementSystem.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		94F436672D62492C00A6C17E /* Team7LibraryManagementSystemTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Team7LibraryManagementSystemTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		94F436712D62492C00A6C17E /* Team7LibraryManagementSystemUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Team7LibraryManagementSystemUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -52,6 +63,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				94F436882D624A1700A6C17E /* FirebaseAnalytics in Frameworks */,
+				94F4368E2D624A1700A6C17E /* FirebaseFirestore in Frameworks */,
+				94F436912D624A8100A6C17E /* SwiftSMTP in Frameworks */,
+				94F4368C2D624A1700A6C17E /* FirebaseAuth in Frameworks */,
+				94F4368A2D624A1700A6C17E /* FirebaseAnalyticsWithoutAdIdSupport in Frameworks */,
+				458024352D64A87500D5CD6D /* FirebaseStorage in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -72,12 +89,21 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		458024332D64A87500D5CD6D /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		94F4364E2D62492900A6C17E = {
 			isa = PBXGroup;
 			children = (
+				4534B7052D647D6C0003102E /* .gitignore */,
 				94F436592D62492900A6C17E /* Team7LibraryManagementSystem */,
 				94F4366A2D62492C00A6C17E /* Team7LibraryManagementSystemTests */,
 				94F436742D62492C00A6C17E /* Team7LibraryManagementSystemUITests */,
+				458024332D64A87500D5CD6D /* Frameworks */,
 				94F436582D62492900A6C17E /* Products */,
 			);
 			sourceTree = "<group>";
@@ -112,6 +138,12 @@
 			);
 			name = Team7LibraryManagementSystem;
 			packageProductDependencies = (
+				94F436872D624A1700A6C17E /* FirebaseAnalytics */,
+				94F436892D624A1700A6C17E /* FirebaseAnalyticsWithoutAdIdSupport */,
+				94F4368B2D624A1700A6C17E /* FirebaseAuth */,
+				94F4368D2D624A1700A6C17E /* FirebaseFirestore */,
+				94F436902D624A8100A6C17E /* SwiftSMTP */,
+				458024342D64A87500D5CD6D /* FirebaseStorage */,
 			);
 			productName = Team7LibraryManagementSystem;
 			productReference = 94F436572D62492900A6C17E /* Team7LibraryManagementSystem.app */;
@@ -195,6 +227,10 @@
 			);
 			mainGroup = 94F4364E2D62492900A6C17E;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				94F436862D624A1700A6C17E /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				94F4368F2D624A8100A6C17E /* XCRemoteSwiftPackageReference "Swift-SMTP" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 94F436582D62492900A6C17E /* Products */;
 			projectDirPath = "";
@@ -212,6 +248,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4534B7062D647D7B0003102E /* .gitignore in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -396,7 +433,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Team7LibraryManagementSystem/Preview Content\"";
-				DEVELOPMENT_TEAM = 472CPKZ236;
+				DEVELOPMENT_TEAM = 2S7X3Q9883;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -404,12 +441,13 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = Rakshit.Team7LibraryManagementSystem;
+				PRODUCT_BUNDLE_IDENTIFIER = main.Team7LibraryManagementSystem;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -425,7 +463,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Team7LibraryManagementSystem/Preview Content\"";
-				DEVELOPMENT_TEAM = 472CPKZ236;
+				DEVELOPMENT_TEAM = 2S7X3Q9883;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -433,12 +471,13 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = Rakshit.Team7LibraryManagementSystem;
+				PRODUCT_BUNDLE_IDENTIFIER = main.Team7LibraryManagementSystem;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -558,6 +597,58 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		94F436862D624A1700A6C17E /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.8.1;
+			};
+		};
+		94F4368F2D624A8100A6C17E /* XCRemoteSwiftPackageReference "Swift-SMTP" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Kitura/Swift-SMTP.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 6.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		458024342D64A87500D5CD6D /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 94F436862D624A1700A6C17E /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
+		};
+		94F436872D624A1700A6C17E /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 94F436862D624A1700A6C17E /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		94F436892D624A1700A6C17E /* FirebaseAnalyticsWithoutAdIdSupport */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 94F436862D624A1700A6C17E /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalyticsWithoutAdIdSupport;
+		};
+		94F4368B2D624A1700A6C17E /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 94F436862D624A1700A6C17E /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		94F4368D2D624A1700A6C17E /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 94F436862D624A1700A6C17E /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		94F436902D624A8100A6C17E /* SwiftSMTP */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 94F4368F2D624A8100A6C17E /* XCRemoteSwiftPackageReference "Swift-SMTP" */;
+			productName = SwiftSMTP;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 94F4364F2D62492900A6C17E /* Project object */;
 }

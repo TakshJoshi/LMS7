@@ -1,9 +1,9 @@
-//
-//  ContentView.swift
-//  Team7LibraryManagementSystem
-//
-//  Created by Rakshit  on 16/02/25.
-//
+////
+////  ContentView.swift
+////  Team7LibraryManagementSystem
+////
+////  Created by Rakshit  on 16/02/25.
+////
 
 import SwiftUI
 
@@ -20,5 +20,5 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
+    LibraryLoginView()
 }
