@@ -1,15 +1,7 @@
 import SwiftUI
 import FirebaseFirestore
 
-struct Library: Identifiable {
-    var id: String
-    var name: String
-    var location: String
-    var assignedLibrarian: String
-    var totalBooks: Int
-    var category: String
-    var phone: String
-}
+
 
 struct MyLibrariesView: View {
     @State private var libraries: [Library] = []
@@ -22,7 +14,8 @@ struct MyLibrariesView: View {
         }
         return libraries.filter { library in
             library.name.localizedCaseInsensitiveContains(searchText) ||
-            library.location.localizedCaseInsensitiveContains(searchText)
+            library.address.city.localizedCaseInsensitiveContains(searchText) ||
+            library.address.state.localizedCaseInsensitiveContains(searchText)
         }
     }
 
@@ -47,7 +40,7 @@ struct MyLibrariesView: View {
                         VStack(alignment: .leading) {
                             Text(library.name)
                                 .font(.headline)
-                            Text(library.location)
+                            Text("\(library.address.city), \(library.address.state)")
                                 .font(.subheadline)
                                 .foregroundColor(.gray)
                         }
@@ -98,8 +91,6 @@ struct MyLibrariesView: View {
     private func fetchLibraries() {
         let db = Firestore.firestore()
         
-        print("Fetching libraries...")
-        
         db.collection("libraries").addSnapshotListener { snapshot, error in
             if let error = error {
                 print("Error fetching libraries: \(error.localizedDescription)")
@@ -111,29 +102,84 @@ struct MyLibrariesView: View {
                 return
             }
             
-            print("Found \(documents.count) libraries")
-            
-            documents.forEach { doc in
-                print("Library document: \(doc.documentID)")
-                print("Data: \(doc.data())")
-            }
-            
-            libraries = documents.map { doc in
+            self.libraries = documents.compactMap { doc in
                 let data = doc.data()
-                let library = Library(
-                    id: doc.documentID,
-                    name: data["name"] as? String ?? "",
-                    location: data["address"] as? String ?? "",
-                    assignedLibrarian: data["assignedLibrarian"] as? String ?? "",
-                    totalBooks: data["totalBooks"] as? Int ?? 0,
-                    category: data["category"] as? String ?? "",
-                    phone: data["phone"] as? String ?? ""
+                
+                guard let name = data["name"] as? String,
+                      let code = data["code"] as? String,
+                      let description = data["description"] as? String,
+                      let addressData = data["address"] as? [String: Any],
+                      let contactData = data["contact"] as? [String: Any],
+                      let operationalHoursData = data["operationalHours"] as? [String: Any],
+                      let settingsData = data["settings"] as? [String: Any],
+                      let staffData = data["staff"] as? [String: Any],
+                      let featuresData = data["features"] as? [String: Bool],
+                      let createdAt = data["createdAt"] as? Timestamp else {
+                    print("Error parsing library data for document: \(doc.documentID)")
+                    return nil
+                }
+                
+                let address = Address(
+                    line1: addressData["line1"] as? String ?? "",
+                    line2: addressData["line2"] as? String ?? "",
+                    city: addressData["city"] as? String ?? "",
+                    state: addressData["state"] as? String ?? "",
+                    zipCode: addressData["zipCode"] as? String ?? "",
+                    country: addressData["country"] as? String ?? ""
                 )
-                print("Mapped library: \(library.name)")
-                return library
+                
+                let contact = Contact(
+                    phone: contactData["phone"] as? String ?? "",
+                    email: contactData["email"] as? String ?? "",
+                    website: contactData["website"] as? String ?? ""
+                )
+                
+                let weekdayHours = (operationalHoursData["weekday"] as? [String: String]) ?? [:]
+                let weekendHours = (operationalHoursData["weekend"] as? [String: String]) ?? [:]
+                
+                let operationalHours = OperationalHours(
+                    weekday: OpeningHours(
+                        opening: weekdayHours["opening"] ?? "",
+                        closing: weekdayHours["closing"] ?? ""
+                    ),
+                    weekend: OpeningHours(
+                        opening: weekendHours["opening"] ?? "",
+                        closing: weekendHours["closing"] ?? ""
+                    )
+                )
+                
+                let settings = LibrarySettings(
+                    maxBooksPerMember: settingsData["maxBooksPerMember"] as? String ?? "",
+                    lateFee: settingsData["lateFee"] as? String ?? "",
+                    lendingPeriod: settingsData["lendingPeriod"] as? String ?? ""
+                )
+                
+                let staff = Staff(
+                    headLibrarian: staffData["headLibrarian"] as? String ?? "",
+                    totalStaff: staffData["totalStaff"] as? String ?? ""
+                )
+                
+                let features = Features(
+                    wifi: featuresData["wifi"] ?? false,
+                    computerLab: featuresData["computerLab"] ?? false,
+                    meetingRooms: featuresData["meetingRooms"] ?? false,
+                    parking: featuresData["parking"] ?? false
+                )
+                
+                return Library(
+                    id: doc.documentID,
+                    name: name,
+                    code: code,
+                    description: description,
+                    address: address,
+                    contact: contact,
+                    operationalHours: operationalHours,
+                    settings: settings,
+                    staff: staff,
+                    features: features,
+                    createdAt: createdAt
+                )
             }
-            
-            print("Final libraries array count: \(libraries.count)")
         }
     }
     

@@ -96,6 +96,7 @@ struct SignupAuthentication: View {
             errorMessage = "Passwords do not match"
             return
         }
+        var lowerCaseEmail = email.lowercased()
         
         let dobString = formatDate(dob)
         
@@ -113,7 +114,7 @@ struct SignupAuthentication: View {
                 "firstName": firstName,
                 "lastName": lastName,
                 "dob": dobString,
-                "email": email,
+                "email": lowerCaseEmail,
                 "role": "user",
                 "isDeleted": false
             ]) { error in
@@ -121,7 +122,9 @@ struct SignupAuthentication: View {
                     errorMessage = "Failed to save user data: \(error.localizedDescription)"
                 } else {
                     isSignedUp = true  // ✅ Trigger navigation on success
-                    UserDefaults.standard.removeObject(forKey: "userEmail")
+                    //UserDefaults.standard.removeObject(forKey: "userEmail")
+                    UserDefaults.standard.set(user.uid, forKey: "userId")
+
 
                     sendWelcomeEmail(to: email) { success, message in
                         DispatchQueue.main.async {

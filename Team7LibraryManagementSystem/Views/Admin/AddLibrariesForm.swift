@@ -1,150 +1,139 @@
 import SwiftUI
 import FirebaseFirestore
 
-struct Librarian: Identifiable {
-    var id: String
-    var fullName: String
-    var email: String
-    var phone: String
-    var isEmployee: Bool
-    var role: String
-    var createdAt: Timestamp
-    var isSuspended: Bool = false
-}
-
-struct InputField2: View {
-    let title: String
-    let placeholder: String
-    @Binding var text: String
-    var keyboardType: UIKeyboardType = .default
-    
-    var body: some View {
-        VStack(alignment: .leading) {
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.gray)
-            TextField(placeholder, text: $text)
-                .keyboardType(keyboardType)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-        }
-    }
-}
-
 struct AddLibrariesForm: View {
-    @State private var libraryName: String = ""
-    @State private var address: String = ""
-    @State private var phone: String = ""
-    @State private var selectedLibrarian: String = ""
-    @State private var totalBooks: String = ""
-    @State private var selectedCategory: String = "Science"
+    @Environment(\.presentationMode) var presentationMode
     
-    @State private var librarians: [Librarian] = []
-    @State private var isLoading = true
+    // Basic Information
+    @State private var libraryName = ""
+    @State private var libraryCode = ""
+    @State private var description = ""
+    @State private var selectedImage: UIImage? = nil
+    
+    // Location Details
+    @State private var addressLine1 = ""
+    @State private var addressLine2 = ""
+    @State private var city = ""
+    @State private var state = ""
+    @State private var zipCode = ""
+    @State private var country = ""
+    
+    // Contact Information
+    @State private var phoneNumber = ""
+    @State private var emailAddress = ""
+    @State private var website = ""
+    
+    // Operational Hours
+    @State private var openingTimeWeekday = ""
+    @State private var closingTimeWeekday = ""
+    @State private var openingTimeWeekend = ""
+    @State private var closingTimeWeekend = ""
+    
+    // Library Settings
+    @State private var maxBooksPerMember = ""
+    @State private var lateFee = ""
+    @State private var lendingPeriod = ""
+    
+    // Staff Information
+    @State private var headLibrarian = ""
+    @State private var totalStaff = ""
+    
+    // Additional Features
+    @State private var hasWifi = false
+    @State private var hasComputerLab = false
+    @State private var hasMeetingRooms = false
+    @State private var hasParking = false
+    
     @State private var errorMessage: String?
     @State private var showAlert = false
     
-    @Environment(\.dismiss) var dismiss
-    
-    let categories = ["Science", "Arts", "Technology", "History"]
-    
     var body: some View {
         NavigationStack {
-            Form {
-                // Library Name
-                InputField2(title: "Library Name", placeholder: "Enter library name", text: $libraryName)
-                
-                // Address
-                InputField2(title: "Address", placeholder: "Enter address", text: $address)
-
-                // Phone Number
-                InputField2(title: "Phone", placeholder: "Enter phone number", text: $phone, keyboardType: .phonePad)
-
-                // Librarian Picker
-                Section(header: Text("Assign Librarian")) {
-                    if isLoading {
-                        ProgressView("Loading librarians...")
-                    } else {
-                        Picker("Librarian", selection: $selectedLibrarian) {
-                            ForEach(librarians, id: \.id) { librarian in
-                                Text(librarian.fullName).tag(librarian.id)
-                            }
-                        }
-                    }
-                }
-                
-                // Total Books
-                InputField2(title: "Total Books", placeholder: "Enter total books", text: $totalBooks, keyboardType: .numberPad)
-                
-                // Category Picker
-                Picker("Category", selection: $selectedCategory) {
-                    ForEach(categories, id: \.self) { category in
-                        Text(category)
-                    }
-                }
-                .pickerStyle(.menu)
-                
-                // Save and Cancel Buttons
-                Section {
-                    HStack {
-                        Button("Cancel") {
-                            dismiss()
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(.gray)
+            ScrollView {
+                VStack(spacing: 16) {
+                    LibSectionView(title: "Basic Information", content: {
+                        InputField(title: "Library Name", text: $libraryName, isRequired: true)
+                        InputField(title: "Library Code", text: $libraryCode, isRequired: true)
+                        InputField(title: "Description", text: $description, isMultiline: true)
+                        UploadImageButton(selectedImage: $selectedImage)
+                    })
+                    
+                    LibSectionView(title: "Location Details", icon: "mappin.and.ellipse", content: {
+                        InputField(title: "Address Line", text: $addressLine1, isRequired: true)
                         
-                        Button("Save") {
-                            saveLibrary()
+                        HStack {
+                            InputField(title: "City", text: $city, isRequired: true)
+                            InputField(title: "State", text: $state, isRequired: true)
                         }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(!isFormValid())
-                    }
+                        HStack {
+                            InputField(title: "ZIP Code", text: $zipCode, isRequired: true)
+                            InputField(title: "Country", text: $country)
+                        }
+                    })
+                    
+                    LibSectionView(title: "Contact Information", content: {
+                        InputField(title: "Phone Number", text: $phoneNumber, isRequired: true)
+                        InputField(title: "Email Address", text: $emailAddress, isRequired: true)
+                        InputField(title: "Website", text: $website)
+                    })
+                    
+                    LibSectionView(title: "Operational Hours", icon: "clock", content: {
+                        HStack {
+                            InputField(title: "Weekday Opening", text: $openingTimeWeekday)
+                            InputField(title: "Weekday Closing", text: $closingTimeWeekday)
+                        }
+                        HStack {
+                            InputField(title: "Weekend Opening", text: $openingTimeWeekend)
+                            InputField(title: "Weekend Closing", text: $closingTimeWeekend)
+                        }
+                    })
+                    
+                    LibSectionView(title: "Library Settings", icon: "info.circle", content: {
+                        InputField(title: "Maximum Books Per Member", text: $maxBooksPerMember)
+                        InputField(title: "Late Fee (per day)", text: $lateFee)
+                        InputField(title: "Lending Period (days)", text: $lendingPeriod)
+                    })
+                    
+                    LibSectionView(title: "Staff Information", icon: "person.2", content: {
+                        InputField(title: "Head Librarian Name", text: $headLibrarian)
+                        InputField(title: "Total Staff Members", text: $totalStaff)
+                    })
+                    
+                    LibSectionView(title: "Additional Features", content: {
+                        ToggleField(title: "WiFi Available", isOn: $hasWifi)
+                        ToggleField(title: "Computer Lab", isOn: $hasComputerLab)
+                        ToggleField(title: "Meeting Rooms", isOn: $hasMeetingRooms)
+                        ToggleField(title: "Parking Available", isOn: $hasParking)
+                    })
                 }
+                .padding()
             }
-            .navigationTitle("Add New Library")
+            .navigationTitle("Add Libraries")
             .navigationBarTitleDisplayMode(.inline)
+            .navigationBarItems(
+                leading: Button("Cancel") {
+                    presentationMode.wrappedValue.dismiss()
+                },
+                trailing: Button("Save") {
+                    saveLibrary()
+                }
+            )
+            .background(Color(.systemGroupedBackground))
             .alert(isPresented: $showAlert) {
                 Alert(title: Text("Error"), message: Text(errorMessage ?? "Unknown error"), dismissButton: .default(Text("OK")))
-            }
-            .onAppear {
-                fetchLibrarians()
             }
         }
     }
     
     private func isFormValid() -> Bool {
-        return !libraryName.isEmpty && !address.isEmpty && !selectedLibrarian.isEmpty && !phone.isEmpty
-    }
-    
-    private func fetchLibrarians() {
-        let db = Firestore.firestore()
-        db.collection("librarians").addSnapshotListener { snapshot, error in
-            if let error = error {
-                errorMessage = "Error fetching librarians: \(error.localizedDescription)"
-                showAlert = true
-                return
-            }
-            
-            if let documents = snapshot?.documents {
-                self.librarians = documents.compactMap { doc in
-                    let data = doc.data()
-                    return Librarian(
-                        id: doc.documentID,
-                        fullName: data["fullName"] as? String ?? "",
-                        email: data["email"] as? String ?? "",
-                        phone: data["phone"] as? String ?? "",
-                        isEmployee: data["isEmployee"] as? Bool ?? true,
-                        role: data["role"] as? String ?? "Librarian",
-                        createdAt: data["createdAt"] as? Timestamp ?? Timestamp()
-                    )
-                }
-            }
-            isLoading = false
-        }
+        return !libraryName.isEmpty && !libraryCode.isEmpty && !addressLine1.isEmpty &&
+               !city.isEmpty && !state.isEmpty && !zipCode.isEmpty && !phoneNumber.isEmpty &&
+               !emailAddress.isEmpty
     }
     
     private func saveLibrary() {
         guard isFormValid() else {
-            errorMessage = "Please fill all fields correctly."
+            errorMessage = "Please fill all required fields."
             showAlert = true
             return
         }
@@ -152,11 +141,46 @@ struct AddLibrariesForm: View {
         let db = Firestore.firestore()
         let newLibrary: [String: Any] = [
             "name": libraryName,
-            "address": address,
-            "phone": phone,
-            "totalBooks": Int(totalBooks) ?? 0,
-            "category": selectedCategory,
-            "assignedLibrarian": selectedLibrarian,
+            "code": libraryCode,
+            "description": description,
+            "address": [
+                "line1": addressLine1,
+                "line2": addressLine2,
+                "city": city,
+                "state": state,
+                "zipCode": zipCode,
+                "country": country
+            ],
+            "contact": [
+                "phone": phoneNumber,
+                "email": emailAddress,
+                "website": website
+            ],
+            "operationalHours": [
+                "weekday": [
+                    "opening": openingTimeWeekday,
+                    "closing": closingTimeWeekday
+                ],
+                "weekend": [
+                    "opening": openingTimeWeekend,
+                    "closing": closingTimeWeekend
+                ]
+            ],
+            "settings": [
+                "maxBooksPerMember": maxBooksPerMember,
+                "lateFee": lateFee,
+                "lendingPeriod": lendingPeriod
+            ],
+            "staff": [
+                "headLibrarian": headLibrarian,
+                "totalStaff": totalStaff
+            ],
+            "features": [
+                "wifi": hasWifi,
+                "computerLab": hasComputerLab,
+                "meetingRooms": hasMeetingRooms,
+                "parking": hasParking
+            ],
             "createdAt": Timestamp()
         ]
         
@@ -165,7 +189,99 @@ struct AddLibrariesForm: View {
                 errorMessage = "Error saving library: \(error.localizedDescription)"
                 showAlert = true
             } else {
-                dismiss()
+                presentationMode.wrappedValue.dismiss()
+            }
+        }
+    }
+}
+
+struct ToggleField: View {
+    let title: String
+    @Binding var isOn: Bool
+    
+    var body: some View {
+        Toggle(title, isOn: $isOn)
+            .padding()
+            .background(Color(.systemGray6))
+            .cornerRadius(8)
+    }
+}
+
+struct LibSectionView<Content: View>: View {
+    let title: String
+    var icon: String? = nil
+    let content: Content
+    
+    init(title: String, icon: String? = nil, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.icon = icon
+        self.content = content()
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                if let icon = icon {
+                    Image(systemName: icon)
+                        .foregroundColor(.blue)
+                }
+                Text(title)
+                    .font(.headline)
+                    .bold()
+            }
+            content
+        }
+        .padding()
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+    }
+}
+
+struct InputField: View {
+    let title: String
+    @Binding var text: String
+    var isRequired: Bool = false
+    var isMultiline: Bool = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(title + (isRequired ? " *" : ""))
+                .font(.footnote)
+                .foregroundColor(.gray)
+            if isMultiline {
+                TextEditor(text: $text)
+                    .frame(height: 80)
+                    .padding(8)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(8)
+            } else {
+                TextField("Enter \(title.lowercased())", text: $text)
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(8)
+            }
+        }
+    }
+}
+
+struct UploadImageButton: View {
+    @Binding var selectedImage: UIImage?
+    
+    var body: some View {
+        VStack {
+            Button(action: { }) {
+                HStack {
+                    Image(systemName: "photo")
+                        .foregroundColor(.gray)
+                    Text("Upload Image")
+                        .foregroundColor(.black)
+                }
+                .frame(maxWidth: .infinity, minHeight: 50)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.gray, style: StrokeStyle(lineWidth: 1, dash: [5]))
+                )
             }
         }
     }

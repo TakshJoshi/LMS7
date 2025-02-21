@@ -1,10 +1,3 @@
-//
-//  MainTabView.swift
-//  LibraryManagement
-//
-//  Created by Taksh Joshi on 14/02/25.
-//
-
 import SwiftUI
 
 struct MainTabView: View {
@@ -19,12 +12,14 @@ struct MainTabView: View {
                 }
                 .tag(0)
 
-            LibrariansView()
-                .tabItem {
-                    Image(systemName: "person.2.fill")
-                    Text("Librarians")
-                }
-                .tag(1)
+            NavigationStack {
+                LibrariansView()
+            }
+            .tabItem {
+                Image(systemName: "person.2.fill")
+                Text("Librarians")
+            }
+            .tag(1)
 
             MyLibrariesView()
                 .tabItem {
@@ -33,7 +28,7 @@ struct MainTabView: View {
                 }
                 .tag(2)
 
-            Text("📅 Events View")
+            LiveEventsView()
                 .tabItem {
                     Image(systemName: "calendar")
                     Text("Events")

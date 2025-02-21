@@ -50,8 +50,9 @@ struct IndustryIdentifier: Codable {
 
 // Model for Library Book
 
-struct Book: Identifiable {
-    let id: String
+struct Book: Identifiable, Codable {
+   // @DocumentID var documentID: String? // Store Firestore's auto-generated document ID if needed
+    let id: String // This will be mapped from "bookId" in Firestore
     let title: String
     let authors: [String]
     let publisher: String?
@@ -71,8 +72,15 @@ struct Book: Identifiable {
     let totalCheckouts: Int
     let currentlyBorrowed: Int
     let isAvailable: Bool
-    
-    // Added method to safely handle image URL
+
+    // Map Firestore fields correctly
+    enum CodingKeys: String, CodingKey {
+        case id = "bookId" // Maps Firestore "bookId" → Swift "id"
+        case title, authors, publisher, publishedDate, description
+        case pageCount, categories, coverImageUrl, isbn13, language
+        case quantity, availableQuantity, location, status, totalCheckouts, currentlyBorrowed, isAvailable
+    }
+
     func getImageUrl() -> URL? {
         guard let coverImageUrl = coverImageUrl,
               let encodedURL = coverImageUrl.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),

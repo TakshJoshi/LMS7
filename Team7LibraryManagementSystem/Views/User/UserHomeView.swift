@@ -32,7 +32,7 @@ struct UserHomeView: View {
             }
 
             NavigationStack {
-                EventsScreen()
+                UserEventsView()
             }
             .tabItem {
                 Image(systemName: "calendar")
@@ -118,6 +118,7 @@ struct HomeScreen: View {
 struct BooksSection: View {
     let title: String
     let books: [Book]
+    @StateObject private var wishlistManager = WishlistManager()
     
     var body: some View {
         VStack(alignment: .leading) {
@@ -126,8 +127,8 @@ struct BooksSection: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
                     ForEach(books) { book in
-                        NavigationLink(destination: UserBookDetailView(book: book)) {
-                            UserBookCard(book: book)
+                        NavigationLink(destination: UserBookDetailView(book: book,wishlistManager: wishlistManager)) {
+                            UserBookCard(book: book,wishlistManager: wishlistManager)
                         }
                     }
                 }
@@ -167,7 +168,7 @@ class BooksViewModel: ObservableObject {
                 let data = document.data()
                 
                 return Book(
-                    id: document.documentID,
+                    id: (data["bookId"] as? String)!,
                     title: data["title"] as? String ?? "",
                     authors: data["authors"] as? [String] ?? [],
                     publisher: data["publisher"] as? String,
@@ -192,11 +193,14 @@ class BooksViewModel: ObservableObject {
     }
 }
 
-// Updated UserBookDetailView to take a Book
+
+
+
 struct UserBookDetailView: View {
     let book: Book
     @State private var isLiked = false
-    
+    @ObservedObject var wishlistManager: WishlistManager
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -212,39 +216,27 @@ struct UserBookDetailView: View {
                     .frame(height: 300)
                     .cornerRadius(10)
                 }
-                
+
                 // Book Title and Author
                 VStack(alignment: .leading, spacing: 8) {
                     Text(book.title)
                         .font(.title)
                         .fontWeight(.bold)
-                    
+
                     Text(book.authors.joined(separator: ", "))
-//                        .font(.subtitle)
                         .foregroundColor(.secondary)
                 }
-                
-                // Book Details
-                VStack(alignment: .leading, spacing: 10) {
-                    DetailRow(icon: "book", label: "ISBN", value: book.isbn13 ?? "N/A")
-                    DetailRow(icon: "calendar", label: "Published", value: book.publishedDate ?? "N/A")
-                    DetailRow(icon: "doc.text", label: "Pages", value: "\(book.pageCount ?? 0)")
-                    DetailRow(icon: "location", label: "Location", value: book.location)
-                }
-                
-                // Description
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Description")
-                        .font(.headline)
-                    
-                    Text(book.description ?? "No description available")
-                        .font(.body)
-                        .foregroundColor(.secondary)
-                }
-                
+
                 // Action Buttons
                 HStack {
-                    Button(action: { isLiked.toggle() }) {
+                    Button(action: {
+                        if isLiked {
+                            wishlistManager.removeFromWishlist(bookId: book.id)
+                        } else {
+                            wishlistManager.addToWishlist(bookId: book.id)
+                        }
+                        isLiked.toggle()
+                    }) {
                         Image(systemName: isLiked ? "heart.fill" : "heart")
                             .foregroundColor(isLiked ? .red : .gray)
                             .padding()
@@ -267,6 +259,11 @@ struct UserBookDetailView: View {
         }
         .navigationTitle(book.title)
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            wishlistManager.checkIfBookIsInWishlist(bookId: book.id) { isInWishlist in
+                self.isLiked = isInWishlist
+            }
+        }
     }
 }
 
@@ -302,7 +299,8 @@ struct SectionHeader: View {
 
 struct UserBookCard: View {
     let book: Book
-    @State private var isLiked = false // Track heart status
+    @State private var isBookInWishlist = false
+    @ObservedObject var wishlistManager: WishlistManager
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -315,20 +313,25 @@ struct UserBookCard: View {
                         .foregroundColor(.gray)
                 }
                 .scaledToFit()
-                .frame(width: 140, height: 160)
+                .frame(width: 140, height: 110)
                 .cornerRadius(10)
 
                 // Like Button
                 Button(action: {
-                    isLiked.toggle()
+                    if isBookInWishlist {
+                        wishlistManager.removeFromWishlist(bookId: book.id)
+                    } else {
+                        wishlistManager.addToWishlist(bookId: book.id)
+                    }
+                    isBookInWishlist.toggle() // UI State Update
                 }) {
-                    Image(systemName: isLiked ? "heart.fill" : "heart")
-                        .foregroundColor(isLiked ? .red : .gray)
+                    Image(systemName: isBookInWishlist ? "heart.fill" : "heart")
+                        .foregroundColor(isBookInWishlist ? .red : .gray)
                         .padding(8)
                         .clipShape(Circle())
                         .shadow(radius: 2)
                 }
-                .offset(x: 8, y: -8)
+                .offset(x: 18, y: -12)
             }
             .frame(maxWidth: .infinity, alignment: .topTrailing)
 
@@ -355,15 +358,14 @@ struct UserBookCard: View {
         .background(Color(.systemBackground))
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.2), radius: 5)
+        .onAppear {
+            wishlistManager.checkIfBookIsInWishlist(bookId: book.id) { isInWishlist in
+                self.isBookInWishlist = isInWishlist
+            }
+        }
     }
 }
 
-func printBooks(){
-    
-}
-
-
-//
 
 struct MyBooksScreen: View {
     var body: some View {
@@ -408,15 +410,7 @@ struct QuoteCard: View {
     }
 }
 
-struct WishlistScreen: View {
-    var body: some View {
-        VStack {
-            Text("Wishlist")
-                .font(.largeTitle)
-        }
-        .navigationTitle("Wishlist")
-    }
-}
+
 
 struct EventsScreen: View {
     var body: some View {

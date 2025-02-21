@@ -311,3 +311,20 @@ struct StatCard: View {
     }
     .padding()
 }
+struct InputField2: View {
+    let title: String
+    let placeholder: String
+    @Binding var text: String
+    var keyboardType: UIKeyboardType = .default
+    
+    var body: some View {
+        VStack(alignment: .leading) {
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.gray)
+            TextField(placeholder, text: $text)
+                .keyboardType(keyboardType)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+        }
+    }
+}

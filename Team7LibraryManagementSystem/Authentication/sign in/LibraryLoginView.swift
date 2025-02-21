@@ -35,11 +35,11 @@ struct LibraryLoginView: View {
                 .padding(.horizontal)
                 
                 // User Signup
-                NavigationLink(destination: SignupAuthentication()) {
+                NavigationLink(destination: FirebaseAuthView(userRole: "user")) {
                     LoginOptionRow(
                         title: "User",
-                        subtitle: "Sign up to create an account",
-                        iconName: "person.badge.plus"
+                        subtitle: "Login to your account"
+                        
                     )
                 }
                 .padding(.horizontal)

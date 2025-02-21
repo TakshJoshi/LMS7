@@ -83,18 +83,27 @@ struct FirebaseAuthView: View {
             .font(.footnote)
             .foregroundColor(.blue)
             
+            if userRole == "user" {
+                NavigationLink(destination: SignupAuthentication()) {
+                    Text("Create Account")
+                        .font(.footnote)
+                        .foregroundColor(.blue)
+                }
+                .padding(.top, 8)
+            }
+            
             Spacer()
         }
         .padding()
         .fullScreenCover(isPresented: $navigateTo2FA) {
             TwoFactorAuthenticationView(role: userRole, email: email)
         }
-        .fullScreenCover(isPresented: $navigateToMainTab) {
-            MainTabView()
-        }
-        .fullScreenCover(isPresented: $navigateToBooksView) {
-            BooksView()
-        }
+//        .fullScreenCover(isPresented: $navigateToMainTab) {
+//            MainTabView()
+//        }
+//        .fullScreenCover(isPresented: $navigateToBooksView) {
+//            BooksView()
+//        }
         .alert("Reset Password", isPresented: $showForgotPassword) {
             TextField("Enter your email", text: $email)
             Button("Cancel", role: .cancel) { }
@@ -115,53 +124,88 @@ struct FirebaseAuthView: View {
             }
         }
     }
-    
     private func loginUser() {
-            guard networkMonitor.isConnected else {
-                showNetworkAlert = true
-                return
-            }
-            
-            isAuthenticating = true
-            errorMessage = nil
-            
-            FirebaseAuthManager.shared.signIn(email: email, password: password) { result in
-                DispatchQueue.main.async {
-                    switch result {
-                    case .success(let role):
-                        let lowercasedRole = role.lowercased()
-                        let selectedRole = userRole.lowercased()
-                        
-                        // Verify email exists in the correct role table
-                        verifyUserRole(email: email, role: selectedRole) { isValid, message in
-                            if isValid {
-                                // Generate OTP for 2FA
-                                FirebaseManager.shared.generateAndSendOTP(email: email) { success, otpMessage in
-                                    if success {
-                                        UserDefaults.standard.set(role, forKey: "userRole")
-                                        navigateTo2FA = true
-                                    } else {
-                                        errorMessage = otpMessage
+        guard networkMonitor.isConnected else {
+            showNetworkAlert = true
+            return
+        }
+        
+        isAuthenticating = true
+        errorMessage = nil
+        
+        FirebaseAuthManager.shared.signIn(email: email, password: password) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let role):
+                    let lowercasedRole = role.lowercased()
+                    let selectedRole = userRole.lowercased()
+                    
+                    // Verify email exists in the correct role table
+                    verifyUserRole(email: email, role: selectedRole) { isValid, message in
+                        if isValid {
+                            // Fetch userId from Firestore
+                            fetchUserId(email: email) { userId in
+                                if let userId = userId {
+                                    UserDefaults.standard.set(userId, forKey: "userId")
+                                    print("User id in user default when signin \(userId)")
+                                    
+                                    // Generate OTP for 2FA
+                                    FirebaseManager.shared.generateAndSendOTP(email: email) { success, otpMessage in
+                                        if success {
+                                            UserDefaults.standard.set(role, forKey: "userRole")
+                                            navigateTo2FA = true
+                                        } else {
+                                            errorMessage = otpMessage
+                                        }
+                                        isAuthenticating = false
                                     }
+                                } else {
                                     isAuthenticating = false
+                                    errorMessage = "Failed to fetch user ID"
                                 }
-                            } else {
-                                isAuthenticating = false
-                                errorMessage = message
                             }
-                        }
-
-                    case .failure(let error):
-                        isAuthenticating = false
-                        if (error as NSError).code == -1009 {
-                            showNetworkAlert = true
                         } else {
-                            errorMessage = "Invalid Credentials"
+                            isAuthenticating = false
+                            errorMessage = message
                         }
+                    }
+
+                case .failure(let error):
+                    isAuthenticating = false
+                    if (error as NSError).code == -1009 {
+                        showNetworkAlert = true
+                    } else {
+                        errorMessage = "Invalid Credentials"
                     }
                 }
             }
         }
+    }
+
+    
+    private func fetchUserId(email: String, completion: @escaping (String?) -> Void) {
+        let db = Firestore.firestore()
+        
+        db.collection("users")
+            .whereField("email", isEqualTo: email)
+            .getDocuments { snapshot, error in
+                if let error = error {
+                    print("❌ Error fetching user ID: \(error.localizedDescription)")
+                    completion(nil)
+                    return
+                }
+                
+                guard let document = snapshot?.documents.first else {
+                    print("❌ No user found for email: \(email)")
+                    completion(nil)
+                    return
+                }
+                
+                let userId = document.data()["userId"] as? String
+                completion(userId)
+            }
+    }
+
 
         
         func verifyUserRole(email: String, role: String, completion: @escaping (Bool, String) -> Void) {

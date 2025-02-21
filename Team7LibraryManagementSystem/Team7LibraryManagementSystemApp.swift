@@ -18,6 +18,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
 @main
 struct Team7LibraryManagementSystemApp: App {
+   // @StateObject private var wishlistManager = WishlistManager()
+    @StateObject private var wishlistManager = WishlistManager()
+
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     var body: some Scene {
         WindowGroup {

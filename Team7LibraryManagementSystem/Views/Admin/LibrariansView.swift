@@ -3,21 +3,24 @@ import FirebaseFirestore
 
 struct LibrariansView: View {
     @State private var librarians: [Librarian] = []
-    @State private var suspendedCount: Int = 0
-    @State private var selectedLibrarian: Librarian?
     @State private var isAddLibrarianPresented = false
-    @State private var isUpdateLibrarianPresented = false
-    @State private var searchText: String = ""
+    @State private var searchText = ""
 
-    // Statistics
-    @State private var totalFinesCollected: String = "$2,456"
-    @State private var pendingFines: String = "$890"
+    var filteredLibrarians: [Librarian] {
+        if searchText.isEmpty {
+            return librarians
+        }
+        return librarians.filter {
+            $0.fullName.localizedCaseInsensitiveContains(searchText) ||
+            $0.email.localizedCaseInsensitiveContains(searchText)
+        }
+    }
 
     var body: some View {
         VStack(spacing: 16) {
             // Title
-            SectionView(title: "Librarian Management")
-            
+            SectionView(title: "Librarians")
+
             // Search Bar
             TextFieldView(
                 icon: "magnifyingglass",
@@ -26,76 +29,48 @@ struct LibrariansView: View {
             )
 
             // Stats Grid
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                LibrariansStatCard(
-                    icon: "person.2",
-                    title: "\(librarians.count)",
-                    subtitle: "Active Librarians"
-                )
-                LibrariansStatCard(
-                    icon: "wallet.pass",
-                    title: totalFinesCollected,
-                    subtitle: "Fines Collected",
-                    isHighlighted: true
-                )
-                LibrariansStatCard(
-                    icon: "chart.bar",
-                    title: pendingFines,
-                    subtitle: "Pending Fines"
-                )
-                LibrariansStatCard(
-                    icon: "nosign",
-                    title: "\(suspendedCount)",
-                    subtitle: "Suspended"
-                )
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2)) {
+                LibrarianStatCard(title: "Total Librarians", value: "\(librarians.count)", icon: "person.3")
+                LibrarianStatCard(title: "Active Librarians", value: "\(librarians.filter { !$0.isSuspended }.count)", icon: "person.fill.checkmark")
+                LibrarianStatCard(title: "Suspended", value: "\(librarians.filter { $0.isSuspended }.count)", icon: "nosign")
+                LibrarianStatCard(title: "Fines Collected", value: "$2,456", icon: "dollarsign.circle")
             }
             .padding(.horizontal)
 
-            // Librarians List
+            // List of Librarians
             VStack(alignment: .leading, spacing: 8) {
-                SectionView(title: "Librarians")
-                
-                List(librarians) { librarian in
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text(librarian.fullName)
-                                .font(.headline)
-                            Text(librarian.email)
-                                .font(.subheadline)
-                                .foregroundColor(.gray)
-                        }
-                        Spacer()
-                        
-                        // Status Indicator
-                        Text(librarian.isSuspended ? "Suspended" : "Active")
-                            .foregroundColor(librarian.isSuspended ? .red : .green)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(
-                                (librarian.isSuspended ? Color.red : Color.green)
-                                    .opacity(0.1)
-                            )
-                            .cornerRadius(8)
-                        
-                        // Three-dot Menu
-                        Menu {
-                            Button("Update") {
-                                selectedLibrarian = librarian
-                                isUpdateLibrarianPresented.toggle()
-                            }
-                            Button("Delete", role: .destructive) {
-                                deleteLibrarian(librarian)
-                            }
-                            Button(librarian.isSuspended ? "Reactivate" : "Suspend") {
-                                toggleSuspension(for: librarian)
-                            }
-                        } label: {
-                            Image(systemName: "ellipsis.circle")
-                                .font(.title2)
-                                .foregroundColor(.gray)
-                        }
+                SectionView(title: "Librarian List")
+
+                if librarians.isEmpty {
+                    VStack {
+                        ProgressView()
+                        Text("Loading Librarians...")
+                            .foregroundColor(.gray)
                     }
-                    .padding(.vertical, 8)
+                } else {
+                    List(filteredLibrarians) { librarian in
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text(librarian.fullName)
+                                    .font(.headline)
+                                Text(librarian.email)
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
+                            }
+                            Spacer()
+
+                            // Three-dot Menu
+                            Menu {
+                                Button("Active", action: { /* Update status to Active */ })
+                                Button("Suspend", role: .destructive, action: { /* Update status to Suspended */ })
+                            } label: {
+                                Image(systemName: "ellipsis.circle")
+                                    .font(.title2)
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                        .padding(.vertical, 8)
+                    }
                 }
             }
 
@@ -113,11 +88,8 @@ struct LibrariansView: View {
                     .cornerRadius(12)
             }
             .padding(.horizontal)
-            .sheet(isPresented: $isAddLibrarianPresented, onDismiss: fetchLibrarians) {
+            .sheet(isPresented: $isAddLibrarianPresented) {
                 AddLibrarianView()
-            }
-            .sheet(item: $selectedLibrarian, onDismiss: fetchLibrarians) { librarian in
-                UpdateLibrarianView(librarian: librarian)
             }
         }
         .padding(.top, 16)
@@ -126,7 +98,6 @@ struct LibrariansView: View {
         }
     }
     
-    // MARK: - Fetch Librarians from Firestore
     private func fetchLibrarians() {
         let db = Firestore.firestore()
         db.collection("librarians").getDocuments { snapshot, error in
@@ -136,7 +107,7 @@ struct LibrariansView: View {
             }
             
             if let documents = snapshot?.documents {
-                let fetchedLibrarians = documents.map { doc in
+                self.librarians = documents.map { doc in
                     let data = doc.data()
                     return Librarian(
                         id: doc.documentID,
@@ -149,35 +120,47 @@ struct LibrariansView: View {
                         isSuspended: data["isSuspended"] as? Bool ?? false
                     )
                 }
-                self.librarians = fetchedLibrarians
-                self.suspendedCount = fetchedLibrarians.filter { $0.isSuspended }.count
             }
         }
     }
+}
 
-    // MARK: - Delete Librarian
-    private func deleteLibrarian(_ librarian: Librarian) {
-        let db = Firestore.firestore()
-        db.collection("librarians").document(librarian.id).delete { error in
-            if let error = error {
-                print("Error deleting librarian: \(error.localizedDescription)")
-            } else {
-                fetchLibrarians()
+// Existing LibrarianStatCard can remain the same
+struct LibrarianStatCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .center) {
+                Image(systemName: icon)
+                    .resizable()
+                    .frame(width: 34, height: 30)
+                    .aspectRatio(contentMode: .fit)
+                    .foregroundColor(.blue)
             }
+            Text(value)
+                .font(.title2)
+                .fontWeight(.bold)
+            
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.gray)
         }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white)
+        .cornerRadius(10)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(.gray.opacity(0.2), lineWidth: 1.4)
+        )
     }
+}
 
-    // MARK: - Suspend / Reactivate Librarian
-    private func toggleSuspension(for librarian: Librarian) {
-        let db = Firestore.firestore()
-        db.collection("librarians").document(librarian.id).updateData([
-            "isSuspended": !librarian.isSuspended
-        ]) { error in
-            if let error = error {
-                print("Error updating suspension: \(error.localizedDescription)")
-            } else {
-                fetchLibrarians()
-            }
-        }
+struct LibrariansView_Previews: PreviewProvider {
+    static var previews: some View {
+        LibrariansView()
     }
 }

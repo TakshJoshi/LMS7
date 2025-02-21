@@ -7,107 +7,165 @@ struct AddLibrarianView: View {
     @State private var fullName = ""
     @State private var email = ""
     @State private var phone = ""
-    @State private var selectedLibrary = "Library1"
+    @State private var selectedLibrary = ""
     @State private var password = ""
     @State private var confirmPassword = ""
-    @State private var isPasswordVisible = false
-    @State private var isConfirmPasswordVisible = false
+    @State private var showPassword = false
+    @State private var showConfirmPassword = false
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var showAlert = false
     
-    let libraries = ["Library1", "Library2", "Library3"]
+    // Libraries fetched from Firestore
+    @State private var libraries: [String] = []
     
     var isFormValid: Bool {
         !fullName.isEmpty &&
         !email.isEmpty &&
         !phone.isEmpty &&
         !password.isEmpty &&
+        !selectedLibrary.isEmpty &&
         password == confirmPassword
     }
     
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 20) {
-                SectionView(title: "Librarian Details")
-                
-                InputField2(
-                    title: "Full Name",
-                    placeholder: "Enter Full Name",
-                    text: $fullName
-                )
-                
-                InputField2(
-                    title: "Email",
-                    placeholder: "Enter Email",
-                    text: $email,
-                    keyboardType: .emailAddress
-                )
-                
-                InputField2(
-                    title: "Phone",
-                    placeholder: "Enter Phone Number",
-                    text: $phone,
-                    keyboardType: .phonePad
-                )
-                
-                DropdownField2(
-                    title: "Assign Library",
-                    selection: $selectedLibrary,
-                    options: libraries
-                )
-                
-                SecureFieldView2(
-                    title: "Password",
-                    placeholder: "Enter Password",
-                    text: $password,
-                    isVisible: $isPasswordVisible
-                )
-                
-                SecureFieldView2(
-                    title: "Confirm Password",
-                    placeholder: "Confirm Password",
-                    text: $confirmPassword,
-                    isVisible: $isConfirmPasswordVisible
-                )
-                
-                Spacer()
-                
-                HStack {
-                    Button(action: { dismiss() }) {
-                        Text("Cancel")
-                            .frame(maxWidth: .infinity)
+        NavigationView {
+            Form {
+                Section {
+                    VStack(spacing: 4) {
+                        Image(systemName: "person.fill")
+                            .resizable()
+                            .frame(width: 50, height: 50)
                             .padding()
-                            .background(Color(.systemGray5))
-                            .foregroundColor(.black)
-                            .cornerRadius(10)
+                            .background(Color.gray.opacity(0.2))
+                            .clipShape(Circle())
+                            .foregroundStyle(.gray)
+
+                        Text("Add Photo")
+                            .foregroundColor(.blue)
+                            .font(.caption)
                     }
-                    
-                    Button(action: addLibrarian) {
-                        if isLoading {
-                            ProgressView()
-                                .tint(.white)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .listRowBackground(Color.clear)
+                }
+                
+                Section(header: Text("Personal Information")) {
+                    TextField("Enter full name", text: $fullName)
+                    TextField("Enter email address", text: $email)
+                        .keyboardType(.emailAddress)
+                    TextField("Enter phone number", text: $phone)
+                        .keyboardType(.phonePad)
+                }
+                
+                Section(header: Text("Library Assignment")) {
+                    if isLoading && libraries.isEmpty {
+                        ProgressView()
+                    } else {
+                        Picker("Select Library", selection: $selectedLibrary) {
+                            Text("Select a Library").tag("")
+                            ForEach(libraries, id: \.self) { library in
+                                Text(library).tag(library)
+                            }
+                        }
+                        .pickerStyle(MenuPickerStyle())
+                    }
+                }
+                
+                Section(header: Text("Access Credentials")) {
+                    HStack {
+                        if showPassword {
+                            TextField("Enter password", text: $password)
                         } else {
-                            Text("Save")
+                            SecureField("Enter password", text: $password)
+                        }
+                        Button(action: { showPassword.toggle() }) {
+                            Image(systemName: showPassword ? "eye" : "eye.slash")
+                                .foregroundColor(.gray)
                         }
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(isFormValid ? Color.blue : Color.gray)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
-                    .disabled(!isFormValid || isLoading)
+                    
+                    HStack {
+                        if showConfirmPassword {
+                            TextField("Confirm password", text: $confirmPassword)
+                        } else {
+                            SecureField("Confirm password", text: $confirmPassword)
+                        }
+                        Button(action: { showConfirmPassword.toggle() }) {
+                            Image(systemName: showConfirmPassword ? "eye" : "eye.slash")
+                                .foregroundColor(.gray)
+                        }
+                    }
                 }
             }
-            .padding()
             .navigationTitle("Add Librarian")
             .navigationBarTitleDisplayMode(.inline)
+            .navigationBarItems(
+                leading: Button("Cancel") {
+                    dismiss()
+                },
+                trailing: Button("Save") {
+                    addLibrarian()
+                }
+                .disabled(!isFormValid || isLoading)
+            )
             .alert(isPresented: $showAlert) {
                 Alert(
                     title: Text("Error"),
                     message: Text(errorMessage ?? "Unknown error"),
                     dismissButton: .default(Text("OK"))
                 )
+            }
+            .onAppear {
+                fetchLibraries()
+            }
+        }
+    }
+    
+    private func fetchLibraries() {
+        isLoading = true
+        let db = Firestore.firestore()
+        
+        db.collection("libraries").getDocuments { (querySnapshot, error) in
+            DispatchQueue.main.async {
+                isLoading = false
+                
+                if let error = error {
+                    print("Firestore Error: \(error.localizedDescription)")
+                    errorMessage = "Error fetching libraries: \(error.localizedDescription)"
+                    showAlert = true
+                    return
+                }
+                
+                guard let snapshot = querySnapshot else {
+                    print("No snapshot returned")
+                    errorMessage = "No library data found"
+                    showAlert = true
+                    return
+                }
+                
+                print("Total documents found: \(snapshot.documents.count)")
+                
+                libraries = snapshot.documents.compactMap { document in
+                    let data = document.data()
+                    print("Document data: \(data)")
+                    
+                    // Try different ways of extracting the library name
+                    let libraryName = data["name"] as? String ??
+                                      data["Name"] as? String ??
+                                      data["library_name"] as? String ??
+                                      data["libraryName"] as? String
+                    
+                    print("Extracted library name: \(libraryName ?? "nil")")
+                    return libraryName
+                }
+                
+                print("Parsed libraries: \(libraries)")
+                
+                if libraries.isEmpty {
+                    print("No libraries could be extracted")
+                    errorMessage = "No libraries found"
+                    showAlert = true
+                }
             }
         }
     }
@@ -157,64 +215,11 @@ struct AddLibrarianView: View {
         }
     }
 }
-struct DropdownField2: View {
-    var title: String
-    @Binding var selection: String
-    var options: [String]
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(.footnote)
-                .foregroundColor(.secondary)
-            Menu {
-                ForEach(options, id: \.self) { option in
-                    Button(option) { selection = option }
-                }
-            } label: {
-                HStack {
-                    Text(selection)
-                        .foregroundColor(.primary)
-                    Spacer()
-                    Image(systemName: "chevron.down")
-                        .foregroundColor(.gray)
-                }
-                .padding()
-                .background(Color(.systemGray5))
-                .cornerRadius(10)
-            }
-        }
-    }
-}
-
-struct SecureFieldView2: View {
-    var title: String
-    let placeholder: String
-    @Binding var text: String
-    @Binding var isVisible: Bool
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(.footnote)
-                .foregroundColor(.secondary)
-            HStack {
-                if isVisible {
-                    TextField(placeholder, text: $text)
-                } else {
-                    SecureField(placeholder, text: $text)
-                }
-                
-                Button(action: {
-                    isVisible.toggle()
-                }) {
-                    Image(systemName: isVisible ? "eye.fill" : "eye.slash.fill")
-                        .foregroundColor(.gray)
-                }
-            }
-            .padding()
-            .background(Color(.systemGray6))
-            .cornerRadius(10)
+struct AddLibrarianView_Previews: PreviewProvider {
+    static var previews: some View {
+        NavigationView {
+            AddLibrarianView()
         }
     }
 }
