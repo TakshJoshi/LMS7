@@ -13,7 +13,7 @@ struct Setting: View {
             Form {
                 // MARK: - Profile Section
                 Section {
-                    NavigationLink(destination: Profile()) {
+                    NavigationLink(destination: AdminProfile()) {
                         HStack {
                             Image(systemName: "person.crop.circle.fill")
                                 .resizable()
@@ -85,58 +85,6 @@ struct Setting: View {
         }
     }
 }
-
-// MARK: - Custom Components
-//struct SettingsRow: View {
-//    var icon: String
-//    var title: String
-//    
-//    var body: some View {
-//        HStack {
-//            Image(systemName: icon)
-//                .foregroundColor(.blue)
-//            Text(title)
-//        }
-//    }
-//}
-//
-//struct ToggleRow: View {
-//    var icon: String
-//    var title: String
-//    @Binding var isOn: Bool
-//    
-//    var body: some View {
-//        HStack {
-//            Image(systemName: icon)
-//                .foregroundColor(.blue)
-//            Text(title)
-//            Spacer()
-//            Toggle("", isOn: $isOn)
-//                .labelsHidden()
-//        }
-//    }
-//}
-//
-//struct ExportRow: View {
-//    var icon: String
-//    var title: String
-//    var description: String
-//    
-//    var body: some View {
-//        HStack {
-//            Image(systemName: icon)
-//                .foregroundColor(.blue)
-//            VStack(alignment: .leading) {
-//                Text(title)
-//                    .bold()
-//                Text(description)
-//                    .font(.footnote)
-//                    .foregroundColor(.gray)
-//            }
-//            Spacer()
-//        }
-//    }
-//}
 
 #Preview {
     Setting()

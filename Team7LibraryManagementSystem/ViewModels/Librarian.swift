@@ -7,8 +7,10 @@
 //
 import SwiftUI
 import FirebaseFirestore
-struct Librarian: Identifiable {
-    let id: String
+struct Librarian: Identifiable ,Codable{
+    var id: String
+    
+    let userId: String
     let fullName: String
     let email: String
     let phone: String

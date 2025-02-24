@@ -156,7 +156,7 @@ struct TwoFactorAuthenticationView: View {
                 if(role == "Admin"){
                     MainTabView()
                         .navigationBarBackButtonHidden(true)
-                }else if (role == "librarian"){
+                }else if (role == "Librarian"){
                     LibrarianTabView()
                         .navigationBarBackButtonHidden(true)
                 }

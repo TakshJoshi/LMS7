@@ -149,6 +149,7 @@ struct AddAdminView: View {
 
             let db = Firestore.firestore()
             let adminData: [String: Any] = [
+                "userId": userID, // Add the userId field
                 "fullName": fullName,
                 "email": email,
                 "phone": phone,

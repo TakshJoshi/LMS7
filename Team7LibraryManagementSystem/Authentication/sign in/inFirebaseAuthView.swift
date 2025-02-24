@@ -6,8 +6,8 @@
 //
 import SwiftUI
 import FirebaseAuth
-import Network
 import FirebaseFirestore
+
 struct FirebaseAuthView: View {
     let userRole: String
     @State private var email: String = ""
@@ -15,8 +15,6 @@ struct FirebaseAuthView: View {
     @State private var errorMessage: String?
     @State private var isAuthenticating = false
     @State private var navigateTo2FA = false
-    @State private var navigateToMainTab = false
-    @State private var navigateToBooksView = false
     @State private var showForgotPassword = false
     @StateObject private var networkMonitor = NetworkMonitor.shared
     @State private var showNetworkAlert = false
@@ -74,7 +72,7 @@ struct FirebaseAuthView: View {
                         .cornerRadius(10)
                 }
             }
-            .disabled(isAuthenticating)
+            .disabled(isAuthenticating || !networkMonitor.isConnected)
             .padding(.horizontal)
             
             Button("Forgot Password?") {
@@ -98,18 +96,12 @@ struct FirebaseAuthView: View {
         .fullScreenCover(isPresented: $navigateTo2FA) {
             TwoFactorAuthenticationView(role: userRole, email: email)
         }
-//        .fullScreenCover(isPresented: $navigateToMainTab) {
-//            MainTabView()
-//        }
-//        .fullScreenCover(isPresented: $navigateToBooksView) {
-//            BooksView()
-//        }
         .alert("Reset Password", isPresented: $showForgotPassword) {
             TextField("Enter your email", text: $email)
             Button("Cancel", role: .cancel) { }
-            //            Button("Reset") {
-            //                resetPassword()
-            //            }
+            Button("Reset") {
+//                resetPassword()
+            }
         } message: {
             Text("Enter your email to receive password reset instructions")
         }
@@ -124,6 +116,7 @@ struct FirebaseAuthView: View {
             }
         }
     }
+    
     private func loginUser() {
         guard networkMonitor.isConnected else {
             showNetworkAlert = true
@@ -140,16 +133,13 @@ struct FirebaseAuthView: View {
                     let lowercasedRole = role.lowercased()
                     let selectedRole = userRole.lowercased()
                     
-                    // Verify email exists in the correct role table
                     verifyUserRole(email: email, role: selectedRole) { isValid, message in
                         if isValid {
-                            // Fetch userId from Firestore
-                            fetchUserId(email: email) { userId in
+                            fetchUserId(email: email,role:selectedRole) { userId in
                                 if let userId = userId {
                                     UserDefaults.standard.set(userId, forKey: "userId")
                                     print("User id in user default when signin \(userId)")
                                     
-                                    // Generate OTP for 2FA
                                     FirebaseManager.shared.generateAndSendOTP(email: email) { success, otpMessage in
                                         if success {
                                             UserDefaults.standard.set(role, forKey: "userRole")
@@ -169,7 +159,7 @@ struct FirebaseAuthView: View {
                             errorMessage = message
                         }
                     }
-
+                    
                 case .failure(let error):
                     isAuthenticating = false
                     if (error as NSError).code == -1009 {
@@ -181,12 +171,29 @@ struct FirebaseAuthView: View {
             }
         }
     }
-
     
-    private func fetchUserId(email: String, completion: @escaping (String?) -> Void) {
+    private func fetchUserId(email: String, role: String, completion: @escaping (String?) -> Void) {
         let db = Firestore.firestore()
         
-        db.collection("users")
+        // Determine the collection name based on the role
+        let collectionName: String
+        switch role.lowercased() {
+        case "admin":
+            collectionName = "admins"
+        case "librarian":
+            collectionName = "librarians"
+        case "user":
+            collectionName = "users"
+        default:
+            print("❌ Invalid role: \(role)")
+            completion(nil)
+            return
+        }
+        
+        print("Querying Firestore for email: \(email) in collection: \(collectionName)")
+        
+        // Query the appropriate collection
+        db.collection(collectionName)
             .whereField("email", isEqualTo: email)
             .getDocuments { snapshot, error in
                 if let error = error {
@@ -196,44 +203,48 @@ struct FirebaseAuthView: View {
                 }
                 
                 guard let document = snapshot?.documents.first else {
-                    print("❌ No user found for email: \(email)")
+                    print("❌ No document found for email: \(email) in collection: \(collectionName)")
                     completion(nil)
                     return
                 }
                 
+                // Fetch the userId field
                 let userId = document.data()["userId"] as? String
+                if userId == nil {
+                    print("❌ userId field is missing in the document")
+                } else {
+                    print("✅ Fetched userId: \(userId!) from collection: \(collectionName)")
+                }
                 completion(userId)
             }
     }
-
-
+    
+    private func verifyUserRole(email: String, role: String, completion: @escaping (Bool, String) -> Void) {
+        let collectionName: String
         
-        func verifyUserRole(email: String, role: String, completion: @escaping (Bool, String) -> Void) {
-            let collectionName: String
-            
-            switch role {
-            case "admin":
-                collectionName = "admins"
-            case "librarian":
-                collectionName = "librarians"
-            case "user":
-                collectionName = "users"
-            default:
-                completion(false, "Invalid role selection")
-                return
-            }
-            
-            let db = Firestore.firestore()
-            db.collection(collectionName).whereField("email", isEqualTo: email).getDocuments { snapshot, error in
-                if let error = error {
-                    completion(false, "Error checking role: \(error.localizedDescription)")
-                } else if let snapshot = snapshot, !snapshot.documents.isEmpty {
-                    completion(true, "")
-                } else {
-                    completion(false, "Access denied: Email does not belong to the selected role")
-                }
+        switch role.lowercased() {
+        case "admin":
+            collectionName = "admins"
+        case "librarian":
+            collectionName = "librarians"
+        case "user":
+            collectionName = "users"
+        default:
+            completion(false, "Invalid role selection")
+            return
+        }
+        
+        let db = Firestore.firestore()
+        db.collection(collectionName).whereField("email", isEqualTo: email).getDocuments { snapshot, error in
+            if let error = error {
+                completion(false, "Error checking role: \(error.localizedDescription)")
+            } else if let snapshot = snapshot, !snapshot.documents.isEmpty {
+                completion(true, "")
+            } else {
+                completion(false, "Access denied: Email does not belong to the selected role")
             }
         }
+    }
     
     @MainActor
     //    private func resetPassword() {

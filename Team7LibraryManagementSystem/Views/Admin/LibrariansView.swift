@@ -3,96 +3,72 @@ import FirebaseFirestore
 
 struct LibrariansView: View {
     @State private var librarians: [Librarian] = []
-    @State private var isAddLibrarianPresented = false
     @State private var searchText = ""
-
+    @State private var showAddLibrariansForm = false
+    
     var filteredLibrarians: [Librarian] {
         if searchText.isEmpty {
             return librarians
-        }
-        return librarians.filter {
-            $0.fullName.localizedCaseInsensitiveContains(searchText) ||
-            $0.email.localizedCaseInsensitiveContains(searchText)
+        } else {
+            return librarians.filter {
+                $0.fullName.localizedCaseInsensitiveContains(searchText) ||
+                $0.email.localizedCaseInsensitiveContains(searchText)
+            }
         }
     }
-
+    
     var body: some View {
-        VStack(spacing: 16) {
-            // Title
-            SectionView(title: "Librarians")
-
-            // Search Bar
-            TextFieldView(
-                icon: "magnifyingglass",
-                placeholder: "Search librarians...",
-                text: $searchText
-            )
-
-            // Stats Grid
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2)) {
-                LibrarianStatCard(title: "Total Librarians", value: "\(librarians.count)", icon: "person.3")
-                LibrarianStatCard(title: "Active Librarians", value: "\(librarians.filter { !$0.isSuspended }.count)", icon: "person.fill.checkmark")
-                LibrarianStatCard(title: "Suspended", value: "\(librarians.filter { $0.isSuspended }.count)", icon: "nosign")
-                LibrarianStatCard(title: "Fines Collected", value: "$2,456", icon: "dollarsign.circle")
-            }
-            .padding(.horizontal)
-
-            // List of Librarians
-            VStack(alignment: .leading, spacing: 8) {
-                SectionView(title: "Librarian List")
-
-                if librarians.isEmpty {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 24) {
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(.gray)
+                        TextField("Search", text: $searchText)
+                    }
+                    .padding(.horizontal, 15)
+                    .padding(.vertical, 10)
+                    .background(Color(.systemGray5))
+                    .cornerRadius(8)
+                    .padding(.horizontal)
+                    
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2)) {
+                        LibrarianStatCard(title: "Total Librarians", value: "\(librarians.count)", icon: "person.3")
+                        LibrarianStatCard(title: "Active Librarians", value: "\(librarians.filter { !$0.isSuspended }.count)", icon: "person.fill.checkmark")
+                        LibrarianStatCard(title: "On Leave", value: "\(librarians.filter { $0.isSuspended }.count)", icon: "person.fill.xmark")
+                        LibrarianStatCard(title: "Suspended", value: "\(librarians.filter { $0.isSuspended }.count)", icon: "nosign")
+                    }
+                    .padding(.horizontal)
+                    .cornerRadius(10)
+                    
                     VStack {
-                        ProgressView()
-                        Text("Loading Librarians...")
-                            .foregroundColor(.gray)
-                    }
-                } else {
-                    List(filteredLibrarians) { librarian in
-                        HStack {
-                            VStack(alignment: .leading) {
-                                Text(librarian.fullName)
-                                    .font(.headline)
-                                Text(librarian.email)
-                                    .font(.subheadline)
-                                    .foregroundColor(.gray)
-                            }
-                            Spacer()
-
-                            // Three-dot Menu
-                            Menu {
-                                Button("Active", action: { /* Update status to Active */ })
-                                Button("Suspend", role: .destructive, action: { /* Update status to Suspended */ })
-                            } label: {
-                                Image(systemName: "ellipsis.circle")
-                                    .font(.title2)
-                                    .foregroundColor(.gray)
-                            }
+                        ForEach(filteredLibrarians.indices, id: \..self) { index in
+                            LibrarianRow(librarian: $librarians[index])
+                            Divider()
                         }
-                        .padding(.vertical, 8)
                     }
+                    .padding()
+                    .background(.white)
+                    .cornerRadius(12)
+                    .padding(.horizontal)
                 }
             }
-
-            Spacer()
-
-            // Add New Librarian Button
-            Button(action: {
-                isAddLibrarianPresented.toggle()
-            }) {
-                Text("+ Add New Librarian")
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(12)
+            .navigationTitle("Librarians")
+            .toolbar {
+                Image(systemName: "plus")
+                    .font(.title2)
+                    .foregroundStyle(.blue)
+                    .onTapGesture {
+                        showAddLibrariansForm = true
+                    }
             }
-            .padding(.horizontal)
-            .sheet(isPresented: $isAddLibrarianPresented) {
-                AddLibrarianView()
+            .sheet(isPresented: $showAddLibrariansForm) {
+                NavigationStack {
+                    AddLibrarianView()
+                }
             }
+            .background(Color(.systemGroupedBackground))
         }
-        .padding(.top, 16)
         .onAppear {
             fetchLibrarians()
         }
@@ -111,6 +87,7 @@ struct LibrariansView: View {
                     let data = doc.data()
                     return Librarian(
                         id: doc.documentID,
+                        userId: data["userId"] as? String ?? "",
                         fullName: data["fullName"] as? String ?? "",
                         email: data["email"] as? String ?? "",
                         phone: data["phone"] as? String ?? "",
@@ -125,7 +102,43 @@ struct LibrariansView: View {
     }
 }
 
-// Existing LibrarianStatCard can remain the same
+struct LibrarianRow: View {
+    @Binding var librarian: Librarian
+    
+    var body: some View {
+        HStack {
+            Image(systemName: "person.crop.circle")
+                .resizable()
+                .frame(width: 40, height: 40)
+                .clipShape(Circle())
+            
+            VStack(alignment: .leading) {
+                Text(librarian.fullName)
+                    .font(.headline)
+                Text(librarian.email)
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+            }
+            Spacer()
+            
+            Menu {
+                Button("Active", action: { librarian.isSuspended = false })
+                Button("Suspended", action: { librarian.isSuspended = true })
+            }
+            label: {
+                HStack {
+                    Text(librarian.isSuspended ? "Suspended" : "Active")
+                        .foregroundColor(librarian.isSuspended ? .orange : .green)
+                    Image(systemName: "chevron.down")
+                        .foregroundColor(.gray)
+                }
+                .padding()
+            }
+        }
+        .padding(.vertical, 0)
+    }
+}
+
 struct LibrarianStatCard: View {
     let title: String
     let value: String
@@ -150,7 +163,7 @@ struct LibrarianStatCard: View {
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white)
+        .background(Color(.white))
         .cornerRadius(10)
         .overlay(
             RoundedRectangle(cornerRadius: 12)

@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct LibraryLoginView: View {
+//    @EnvironmentObject var authViewModel: AuthViewModel
     var body: some View {
         NavigationView {
             VStack(spacing: 30) {
@@ -29,7 +30,7 @@ struct LibraryLoginView: View {
                 .padding(.horizontal)
                 
                 // Librarian Login
-                NavigationLink(destination: FirebaseAuthView(userRole: "librarian")) {
+                NavigationLink(destination: FirebaseAuthView(userRole: "Librarian")) {
                     LoginOptionRow(title: "Librarian", subtitle: "Login to your account")
                 }
                 .padding(.horizontal)

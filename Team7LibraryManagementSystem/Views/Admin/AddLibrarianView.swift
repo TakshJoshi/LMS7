@@ -192,7 +192,8 @@ struct AddLibrarianView: View {
             // Then add to Firestore
             let db = Firestore.firestore()
             let newLibrarian: [String: Any] = [
-                "id": userId,
+                "id": userId, // Firestore document ID
+                "userId": userId, // Firebase Authentication UID
                 "fullName": fullName,
                 "email": email,
                 "phone": phone,

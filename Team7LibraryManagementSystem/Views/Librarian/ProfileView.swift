@@ -1,43 +1,9 @@
 import SwiftUI
 
 struct ProfileView: View {
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                // Profile Header
-                ProfileHeader(librarian: librarian)
-                    .frame(maxWidth: .infinity)
-                
-                // Contact Details
-                SectionView2(title: "Contact Details") {
-                    ContactDetailsView(librarian: librarian)
-                }
-                
-                // Working Hours
-                SectionView2(title: "Working Hours") {
-                    WorkingHoursView(hours: librarian.workingHours)
-                }
-                
-                // Current Tasks
-                SectionView2(title: "Current Tasks") {
-                    TasksView(tasks: librarian.currentTasks)
-                }
-                
-                // Skills & Expertise
-                SectionView2(title: "Skills & Expertise") {
-                    SkillsView(skills: librarian.skills)
-                }
-                
-                // Recent Activities
-                SectionView2(title: "Recent Activities") {
-                    ActivitiesView(activities: librarian.recentActivities)
-                }
-            }
-            .padding()
-        }
-        .navigationBarTitleDisplayMode(.inline)
-    }
-    
+    @Environment(\.dismiss) var dismiss
+    @State private var isSigningOut = false
+
     let librarian = LibrarianProfile(
         name: "Sarah Anderson",
         role: "Senior Librarian",
@@ -98,8 +64,68 @@ struct ProfileView: View {
             )
         ]
     )
+    var body: some View {
+        NavigationStack {
+            
+            
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    // Profile Header
+                    ProfileHeader(librarian: librarian)
+                        .frame(maxWidth: .infinity)
+                    
+                    // Contact Details
+                    SectionView2(title: "Contact Details") {
+                        ContactDetailsView(librarian: librarian)
+                    }
+                    
+                    // Working Hours
+                    SectionView2(title: "Working Hours") {
+                        WorkingHoursView(hours: librarian.workingHours)
+                    }
+                    
+                    // Current Tasks
+                    SectionView2(title: "Current Tasks") {
+                        TasksView(tasks: librarian.currentTasks)
+                    }
+                    
+                    // Skills & Expertise
+                    SectionView2(title: "Skills & Expertise") {
+                        SkillsView(skills: librarian.skills)
+                    }
+                    
+                    // Recent Activities
+                    SectionView2(title: "Recent Activities") {
+                        ActivitiesView(activities: librarian.recentActivities)
+                    }
+                    
+                    // Sign Out Button
+                    // Sign Out Button
+                                Button(action: {
+                                    isSigningOut = true
+                                }) {
+                                    Text("Sign Out")
+                                        .font(.headline)
+                                        .foregroundColor(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .padding()
+                                        .background(Color.red)
+                                        .cornerRadius(10)
+                                }
+                                .padding(.top, 20)
+                                .fullScreenCover(isPresented: $isSigningOut) {
+                                    LibraryLoginView()
+                                        .navigationBarBackButtonHidden(true)
+                                }
+                            }
+                            .padding()
+            }
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        
+        
+    }
 }
-
 struct ProfileHeader: View {
     let librarian: LibrarianProfile
     @State private var showImagePicker = false
@@ -434,3 +460,7 @@ struct ImagePickerr: UIViewControllerRepresentable {
         }
     }
 } 
+
+#Preview{
+    ProfileView()
+}

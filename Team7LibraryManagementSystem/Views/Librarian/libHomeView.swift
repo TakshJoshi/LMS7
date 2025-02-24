@@ -11,7 +11,10 @@ import FirebaseFirestore
 struct libHomeView: View {
     @State private var books: [Book] = []
     @State private var activeUsers = 0
+    @State private var showProfile = false
+        @State private var showNotification = false
     @State private var recentActivities: [LibraryActivity] = [
+        
         LibraryActivity(
             icon: "book.fill",
             title: "Book Checkout",
@@ -43,101 +46,117 @@ struct libHomeView: View {
     ]
     
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                // Header
-                HStack {
-                    Text("Library Admin")
-                        .font(.title)
-                        .fontWeight(.bold)
-                    
-                    Spacer()
-                    
-                    HStack(spacing: 16) {
-                        Button(action: {}) {
-                            Image(systemName: "bell")
-                                .font(.title2)
-                                .foregroundColor(.primary)
-                        }
+        NavigationStack{
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    // Header
+                    HStack {
+                        Text("Library Admin")
+                            .font(.title)
+                            .fontWeight(.bold)
+                        
+                        Spacer()
+                        
+                        
                         
                         // Profile Image
-                        Circle()
-                            .fill(Color.gray.opacity(0.2))
-                            .frame(width: 40, height: 40)
-                            .overlay(
-                                Image(systemName: "person.fill")
-                                    .foregroundColor(.gray)
-                            )
+                        //                        NavigationLink(destination: ProfileView()) {
+                            .toolbar {
+                                HStack(spacing: 4) { // Adjust spacing as needed
+                                    Image(systemName: "bell")
+                                        .font(.title3)
+                                        .foregroundStyle(.black)
+                                        .onTapGesture {
+                                            showNotification = true
+                                        }.sheet(isPresented: $showNotification) {
+                                            NavigationStack {
+                                                //                                    Events()
+                                            }
+                                        }
+                                    
+                                    Image(systemName: "person.circle.fill")
+                                        .font(.title2)
+                                        .foregroundStyle(.black)
+                                        .onTapGesture {
+                                            showProfile = true
+                                        }.sheet(isPresented: $showProfile) {
+                                            NavigationStack {
+                                                Setting()
+                                            }
+                                        }
+                                }
+                            }
+                        //                    }
                     }
-                }
-                .padding(.horizontal)
-                
-                // Stats Grid
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                    // Total Books
-                    StatCard2(
-                        icon: "book.fill",
-                        iconColor: .blue,
-                        title: "\(books.count)",
-                        subtitle: "Total Books"
-                    )
-                    
-                    // Active Users
-                    StatCard2(
-                        icon: "person.2.fill",
-                        iconColor: .blue,
-                        title: "\(activeUsers)",
-                        subtitle: "Active Users"
-                    )
-                    
-                    // Total Fine
-                    StatCard2(
-                        icon: "dollarsign.circle.fill",
-                        iconColor: .blue,
-                        title: "$123",
-                        subtitle: "Total Fine"
-                    )
-                    
-                    // Issue Book
-                    IssueBookCard()
-                }
-                .padding(.horizontal)
-                
-                // Library Section
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Library")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .padding(.horizontal)
-                    
-                    // Library Card
-                    homeLibraryCard(
-                        name: "Central Library",
-                        location: "Downtown",
-                        image: "library.background"
-                    )
                     .padding(.horizontal)
-                }
-                
-                // Recent Activities
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Recent Activities")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .padding(.horizontal)
                     
-                    VStack(spacing: 12) {
-                        ForEach(recentActivities) { activity in
-                            ActivityRow(activity: activity)
+                    // Stats Grid
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                        // Total Books
+                        StatCard2(
+                            icon: "book.fill",
+                            iconColor: .blue,
+                            title: "\(books.count)",
+                            subtitle: "Total Books"
+                        )
+                        
+                        // Active Users
+                        StatCard2(
+                            icon: "person.2.fill",
+                            iconColor: .blue,
+                            title: "\(activeUsers)",
+                            subtitle: "Active Users"
+                        )
+                        
+                        // Total Fine
+                        StatCard2(
+                            icon: "dollarsign.circle.fill",
+                            iconColor: .blue,
+                            title: "$123",
+                            subtitle: "Total Fine"
+                        )
+                        
+                        // Issue Book
+                        IssueBookCard()
+                    }
+                    .padding(.horizontal)
+                    
+                    // Library Section
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Library")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .padding(.horizontal)
+                        
+                        // Library Card
+                        homeLibraryCard(
+                            name: "Central Library",
+                            location: "Downtown",
+                            image: "library.background"
+                        )
+                        .padding(.horizontal)
+                    }
+                    
+                    // Recent Activities
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Recent Activities")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .padding(.horizontal)
+                        
+                        VStack(spacing: 12) {
+                            ForEach(recentActivities) { activity in
+                                ActivityRow(activity: activity)
+                            }
                         }
+                        .padding(.horizontal)
                     }
-                    .padding(.horizontal)
                 }
+                .padding(.vertical)
             }
-            .padding(.vertical)
-        }
-        .onAppear {
-            fetchLibraryData()
+            .onAppear {
+                fetchLibraryData()
+            }
         }
     }
     
@@ -326,4 +345,14 @@ struct IssueBookCard: View {
 }
 #Preview {
     libHomeView()
+}
+struct ProfileView2: View {
+    var body: some View {
+        VStack {
+            Text("Profile Page")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+        }
+        .navigationTitle("Profile")
+    }
 }

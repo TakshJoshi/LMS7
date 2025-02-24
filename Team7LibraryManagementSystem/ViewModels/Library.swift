@@ -7,8 +7,8 @@
 import SwiftUI
 import FirebaseFirestore
 
-struct Library: Identifiable {
-    let id: String
+struct Library: Identifiable, Codable {
+    @DocumentID var id: String?  // Firestore document ID
     let name: String
     let code: String
     let description: String
@@ -21,7 +21,7 @@ struct Library: Identifiable {
     let createdAt: Timestamp
 }
 
-struct Address {
+struct Address: Codable {
     let line1: String
     let line2: String
     let city: String
@@ -30,34 +30,34 @@ struct Address {
     let country: String
 }
 
-struct Contact {
+struct Contact: Codable {
     let phone: String
     let email: String
     let website: String
 }
 
-struct OperationalHours {
+struct OperationalHours: Codable {
     let weekday: OpeningHours
     let weekend: OpeningHours
 }
 
-struct OpeningHours {
+struct OpeningHours: Codable {
     let opening: String
     let closing: String
 }
 
-struct LibrarySettings {
+struct LibrarySettings: Codable {
     let maxBooksPerMember: String
     let lateFee: String
     let lendingPeriod: String
 }
 
-struct Staff {
+struct Staff: Codable {
     let headLibrarian: String
     let totalStaff: String
 }
 
-struct Features {
+struct Features: Codable {
     let wifi: Bool
     let computerLab: Bool
     let meetingRooms: Bool

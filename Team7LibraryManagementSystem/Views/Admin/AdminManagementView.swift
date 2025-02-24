@@ -10,7 +10,8 @@ import SwiftUI
 import FirebaseFirestore
 
 struct Admin: Identifiable {
-    let id: String
+    let id: String // This is the Firestore document ID
+    var userId: String // This is the Firebase Authentication UID
     var name: String
     var email: String
     var status: AdminStatus
@@ -20,7 +21,6 @@ struct Admin: Identifiable {
 enum AdminStatus {
     case active, suspended
 }
-
 struct AdminManagementView: View {
     @State private var searchText: String = ""
     @State private var admins: [Admin] = []
@@ -90,6 +90,7 @@ struct AdminManagementView: View {
                     let data = doc.data()
                     return Admin(
                         id: doc.documentID,
+                        userId: data["userId"] as? String ?? "",
                         name: data["fullName"] as? String ?? "Unknown",
                         email: data["email"] as? String ?? "No Email",
                         status: (data["status"] as? String == "active") ? .active : .suspended,
