@@ -36,32 +36,34 @@ struct UserHomeView: View {
     }
 }
 
-import SwiftUI
-import FirebaseFirestore
-
 struct HomeScreen: View {
     @StateObject private var booksViewModel = BooksViewModel()
     @State private var searchText = ""
     
     @State private var showUserProfile = false
     @State private var showUserNotification = false
+    @State private var showSearchView = false
     
     var body: some View {
-        NavigationStack{
+        NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     // Search Bar
-                    HStack {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundColor(.gray)
-                            .padding(.leading, 10)
-                        
-                        TextField("Search", text: $searchText)
-                            .padding(5)
+                    NavigationLink(destination: UserSearchView()) {
+                        HStack {
+                            Image(systemName: "magnifyingglass")
+                                .foregroundColor(.gray)
+                                .padding(.leading, 10)
+                            
+                            Text("Search")
+                                .foregroundColor(.gray)
+                                .padding(5)
+                        }
+                        .padding(1)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(10)
                     }
-                    .padding(1)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(10)
                     .padding(.horizontal)
                     
                     // Books You May Like Section
@@ -87,33 +89,34 @@ struct HomeScreen: View {
                         )
                     }
                 }
-                .padding(.top)
-                .onAppear {
-                    booksViewModel.fetchBooks()
-                }
-                .navigationTitle("HOME")
-                .toolbar {
-                    HStack(spacing: 8) { // Adjust spacing as needed
-                        Image(systemName: "bell")
-                            .font(.title3)
-                            .foregroundStyle(.black)
-                            .onTapGesture {
-                                showUserNotification = true
-                            }.sheet(isPresented: $showUserNotification) {
-                                NavigationStack {
+                                .padding(.top)
+                                .onAppear {
+                                    booksViewModel.fetchBooks()
+                                }
+                                .navigationTitle("HOME")
+                                .toolbar {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "bell")
+                                            .font(.title3)
+                                            .foregroundStyle(.black)
+                                            .onTapGesture {
+                                                showUserNotification = true
+                                            }.sheet(isPresented: $showUserNotification) {
+                                                NavigationStack {
                                     //                                Notificationpage()
                                 }
                             }
                         
-                        Image(systemName: "person.circle.fill")
-                            .font(.title2)
-                            .foregroundStyle(.black)
-                            .onTapGesture {
-                                showUserProfile = true
-                            }.sheet(isPresented: $showUserProfile) {
-                                NavigationStack {
+                                        Image(systemName: "person.circle.fill")
+                                                                    .font(.title2)
+                                                                    .foregroundStyle(.black)
+                                                                    .onTapGesture {
+                                                                        showUserProfile = true
+                                                                    }.sheet(isPresented: $showUserProfile) {
+                                                                        NavigationStack {
                                     //                                ProfilePage()
-                                }
+                                                                            UserProfileView()
+                                                                        }
                             }
                     }
                 }
