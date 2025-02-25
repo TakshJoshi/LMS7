@@ -7,7 +7,7 @@
 
 import SwiftUI
 import FirebaseFirestore
-
+import FirebaseAuth
 struct PreBookItem: Identifiable {
     let id: String
     let userEmail: String
@@ -21,6 +21,8 @@ struct libHomeView: View {
     @State private var showProfile = false
     @State private var showNotification = false
     @State private var preBookItems: [PreBookItem] = []
+    @State private var assignedLibrary: Library? = nil
+    @State private var libraryImage: UIImage? = nil
     @State private var recentActivities: [LibraryActivity] = [
         
         LibraryActivity(
@@ -130,19 +132,24 @@ struct libHomeView: View {
                     .padding(.horizontal)
                     
                     // Library Section
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Library")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .padding(.horizontal)
-                        
-                        // Library Card
-                        homeLibraryCard(
-                            name: "Central Library",
-                            location: "Downtown",
-                            image: "library.background"
-                        )
-                        .padding(.horizontal)
+                    if let library = assignedLibrary {
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("My Library")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .padding(.horizontal)
+                            
+                            // Library Card
+                            LibraryDetailCard(library: library)
+                                .padding(.horizontal)
+                        }
+                    } else {
+                        VStack {
+                            ProgressView()
+                            Text("Loading Library Details...")
+                                .foregroundColor(.gray)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .center)
                     }
                     
                     // Recent Activities
@@ -165,6 +172,110 @@ struct libHomeView: View {
             .onAppear {
                 fetchLibraryData()
                 fetchPreBookRequests()
+                fetchAssignedLibrary() // Add this line
+            }
+        }
+    }
+    private func fetchAssignedLibrary() {
+        guard let currentUser = Auth.auth().currentUser else {
+            print("No user logged in")
+            return
+        }
+        
+        let db = Firestore.firestore()
+        
+        // Fetch the current librarian's document
+        db.collection("librarians").document(currentUser.uid).getDocument { (document, error) in
+            if let error = error {
+                print("Error fetching librarian: \(error.localizedDescription)")
+                return
+            }
+            
+            guard let document = document, document.exists,
+                  let libraryId = document.data()?["libraryId"] as? String else {
+                print("No assigned library found")
+                return
+            }
+            
+            // Now fetch the library details using libraryId
+            db.collection("libraries").document(libraryId).getDocument { (libraryDocument, error) in
+                if let error = error {
+                    print("Error fetching library: \(error.localizedDescription)")
+                    return
+                }
+                
+                guard let libraryDocument = libraryDocument, libraryDocument.exists else {
+                    print("Library document not found")
+                    return
+                }
+                
+                let data = libraryDocument.data()!
+                
+                let address = Address(
+                    line1: (data["address"] as? [String: Any])?["line1"] as? String ?? "",
+                    line2: (data["address"] as? [String: Any])?["line2"] as? String ?? "",
+                    city: (data["address"] as? [String: Any])?["city"] as? String ?? "",
+                    state: (data["address"] as? [String: Any])?["state"] as? String ?? "",
+                    zipCode: (data["address"] as? [String: Any])?["zipCode"] as? String ?? "",
+                    country: (data["address"] as? [String: Any])?["country"] as? String ?? ""
+                )
+                
+                let contact = Contact(
+                    phone: (data["contact"] as? [String: Any])?["phone"] as? String ?? "",
+                    email: (data["contact"] as? [String: Any])?["email"] as? String ?? "",
+                    website: (data["contact"] as? [String: Any])?["website"] as? String ?? ""
+                )
+                
+                let weekdayHoursData = (data["operationalHours"] as? [String: Any])?["weekday"] as? [String: String] ?? [:]
+                let weekendHoursData = (data["operationalHours"] as? [String: Any])?["weekend"] as? [String: String] ?? [:]
+                
+                let operationalHours = OperationalHours(
+                    weekday: OpeningHours(
+                        opening: weekdayHoursData["opening"] ?? "",
+                        closing: weekdayHoursData["closing"] ?? ""
+                    ),
+                    weekend: OpeningHours(
+                        opening: weekendHoursData["opening"] ?? "",
+                        closing: weekendHoursData["closing"] ?? ""
+                    )
+                )
+                
+                let settings = LibrarySettings(
+                    maxBooksPerMember: (data["settings"] as? [String: Any])?["maxBooksPerMember"] as? String ?? "",
+                    lateFee: (data["settings"] as? [String: Any])?["lateFee"] as? String ?? "",
+                    lendingPeriod: (data["settings"] as? [String: Any])?["lendingPeriod"] as? String ?? ""
+                )
+                
+                let staff = Staff(
+                    headLibrarian: (data["staff"] as? [String: Any])?["headLibrarian"] as? String ?? "",
+                    totalStaff: (data["staff"] as? [String: Any])?["totalStaff"] as? String ?? ""
+                )
+                
+                let featuresData = data["features"] as? [String: Bool] ?? [:]
+                let features = Features(
+                    wifi: featuresData["wifi"] ?? false,
+                    computerLab: featuresData["computerLab"] ?? false,
+                    meetingRooms: featuresData["meetingRooms"] ?? false,
+                    parking: featuresData["parking"] ?? false
+                )
+                
+                let library = Library(
+                    id: libraryDocument.documentID,
+                    name: data["name"] as? String ?? "",
+                    code: data["code"] as? String ?? "",
+                    description: data["description"] as? String ?? "",
+                    address: address,
+                    contact: contact,
+                    operationalHours: operationalHours,
+                    settings: settings,
+                    staff: staff,
+                    features: features,
+                    createdAt: data["createdAt"] as? Timestamp ?? Timestamp()
+                )
+                
+                DispatchQueue.main.async {
+                    self.assignedLibrary = library
+                }
             }
         }
     }
@@ -436,6 +547,43 @@ struct IssueBookCard: View {
         }
     }
 }
+struct LibraryDetailCard: View {
+    let library: Library
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // Use a placeholder image or implement image fetching
+            Image("library.background")
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(height: 150)
+                .clipped()
+                .cornerRadius(12)
+                .background(Color(.systemGray6))
+            
+            
+            NavigationLink(destination: EachLibraryView(library: library)) {
+                VStack {
+                    Text(library.name)
+                        .font(.title3)
+                        .fontWeight(.bold)
+                    
+                    HStack {
+                        Image(systemName: "location.fill")
+                            .foregroundColor(.gray)
+                        Text("\(library.address.city), \(library.address.state)")
+                            .foregroundColor(.gray)
+                    }
+                    .font(.subheadline)
+                }
+            }
+                
+             
+            }
+            .padding(.top, 8)
+        }
+    }
+
 #Preview {
     libHomeView()
 }

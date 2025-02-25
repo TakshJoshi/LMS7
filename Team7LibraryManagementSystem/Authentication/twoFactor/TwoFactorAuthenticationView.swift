@@ -1,5 +1,3 @@
-
-
 import SwiftUI
 
 struct TwoFactorAuthenticationView: View {
@@ -121,6 +119,12 @@ struct TwoFactorAuthenticationView: View {
                             if success {
                                 print("OTP VERIFIED")
                                 navigateToNextScreen = true
+                               //UserDefaults.standard.set(userId, forKey: "userId")
+//                                FirebaseAuthManager.shared.fetchUserId(email: email,role:role) { userId in
+//                                    if let userId = userId {
+//                                        UserDefaults.standard.set(userId, forKey: "userId")
+//                                        print("User id in user default when signin \(userId)")
+//                                    }}
                             } else {
                                 print("OTP NOT VERIFIED")
                                 verificationCode = Array(repeating: "", count: 6)
@@ -161,7 +165,7 @@ struct TwoFactorAuthenticationView: View {
                         .navigationBarBackButtonHidden(true)
                 }
                 else if(role == "user"){
-                    UserHomeView()
+                    GenreSelectionView()
                         .navigationBarBackButtonHidden(true)
                 }
                 // Prevent going back

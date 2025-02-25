@@ -19,6 +19,8 @@ struct FirebaseAuthView: View {
     @StateObject private var networkMonitor = NetworkMonitor.shared
     @State private var showNetworkAlert = false
     
+    
+    
     var body: some View {
         VStack(spacing: 16) {
             Spacer()
@@ -123,6 +125,8 @@ struct FirebaseAuthView: View {
             return
         }
         
+        
+        
         isAuthenticating = true
         errorMessage = nil
         
@@ -134,9 +138,9 @@ struct FirebaseAuthView: View {
                     let selectedRole = userRole.lowercased()
                     let lowercaseEmail = email.lowercased()
                     
-                    verifyUserRole(email: lowercaseEmail, role: selectedRole) { isValid, message in
+                    FirebaseAuthManager.shared.verifyUserRole(email: lowercaseEmail, role: selectedRole) { isValid, message in
                         if isValid {
-                            fetchUserId(email: email,role:selectedRole) { userId in
+                            FirebaseAuthManager.shared.fetchUserId(email: email,role:selectedRole) { userId in
                                 if let userId = userId {
                                     UserDefaults.standard.set(userId, forKey: "userId")
                                     print("User id in user default when signin \(userId)")
@@ -173,79 +177,79 @@ struct FirebaseAuthView: View {
         }
     }
     
-    private func fetchUserId(email: String, role: String, completion: @escaping (String?) -> Void) {
-        let db = Firestore.firestore()
-        
-        // Determine the collection name based on the role
-        let collectionName: String
-        switch role.lowercased() {
-        case "admin":
-            collectionName = "admins"
-        case "librarian":
-            collectionName = "librarians"
-        case "user":
-            collectionName = "users"
-        default:
-            print("❌ Invalid role: \(role)")
-            completion(nil)
-            return
-        }
-        
-        print("Querying Firestore for email: \(email) in collection: \(collectionName)")
-        
-        // Query the appropriate collection
-        db.collection(collectionName)
-            .whereField("email", isEqualTo: email)
-            .getDocuments { snapshot, error in
-                if let error = error {
-                    print("❌ Error fetching user ID: \(error.localizedDescription)")
-                    completion(nil)
-                    return
-                }
-                
-                guard let document = snapshot?.documents.first else {
-                    print("❌ No document found for email: \(email) in collection: \(collectionName)")
-                    completion(nil)
-                    return
-                }
-                
-                // Fetch the userId field
-                let userId = document.data()["userId"] as? String
-                if userId == nil {
-                    print("❌ userId field is missing in the document")
-                } else {
-                    print("✅ Fetched userId: \(userId!) from collection: \(collectionName)")
-                }
-                completion(userId)
-            }
-    }
-    
-    private func verifyUserRole(email: String, role: String, completion: @escaping (Bool, String) -> Void) {
-        let collectionName: String
-        
-        switch role.lowercased() {
-        case "admin":
-            collectionName = "admins"
-        case "librarian":
-            collectionName = "librarians"
-        case "user":
-            collectionName = "users"
-        default:
-            completion(false, "Invalid role selection")
-            return
-        }
-        
-        let db = Firestore.firestore()
-        db.collection(collectionName).whereField("email", isEqualTo: email).getDocuments { snapshot, error in
-            if let error = error {
-                completion(false, "Error checking role: \(error.localizedDescription)")
-            } else if let snapshot = snapshot, !snapshot.documents.isEmpty {
-                completion(true, "")
-            } else {
-                completion(false, "Access denied: Email does not belong to the selected role")
-            }
-        }
-    }
+//    private func fetchUserId(email: String, role: String, completion: @escaping (String?) -> Void) {
+//        let db = Firestore.firestore()
+//
+//        // Determine the collection name based on the role
+//        let collectionName: String
+//        switch role.lowercased() {
+//        case "admin":
+//            collectionName = "admins"
+//        case "librarian":
+//            collectionName = "librarians"
+//        case "user":
+//            collectionName = "users"
+//        default:
+//            print("❌ Invalid role: \(role)")
+//            completion(nil)
+//            return
+//        }
+//
+//        print("Querying Firestore for email: \(email) in collection: \(collectionName)")
+//
+//        // Query the appropriate collection
+//        db.collection(collectionName)
+//            .whereField("email", isEqualTo: email)
+//            .getDocuments { snapshot, error in
+//                if let error = error {
+//                    print("❌ Error fetching user ID: \(error.localizedDescription)")
+//                    completion(nil)
+//                    return
+//                }
+//
+//                guard let document = snapshot?.documents.first else {
+//                    print("❌ No document found for email: \(email) in collection: \(collectionName)")
+//                    completion(nil)
+//                    return
+//                }
+//
+//                // Fetch the userId field
+//                let userId = document.data()["userId"] as? String
+//                if userId == nil {
+//                    print("❌ userId field is missing in the document")
+//                } else {
+//                    print("✅ Fetched userId: \(userId!) from collection: \(collectionName)")
+//                }
+//                completion(userId)
+//            }
+//    }
+//
+//    private func verifyUserRole(email: String, role: String, completion: @escaping (Bool, String) -> Void) {
+//        let collectionName: String
+//
+//        switch role.lowercased() {
+//        case "admin":
+//            collectionName = "admins"
+//        case "librarian":
+//            collectionName = "librarians"
+//        case "user":
+//            collectionName = "users"
+//        default:
+//            completion(false, "Invalid role selection")
+//            return
+//        }
+//
+//        let db = Firestore.firestore()
+//        db.collection(collectionName).whereField("email", isEqualTo: email).getDocuments { snapshot, error in
+//            if let error = error {
+//                completion(false, "Error checking role: \(error.localizedDescription)")
+//            } else if let snapshot = snapshot, !snapshot.documents.isEmpty {
+//                completion(true, "")
+//            } else {
+//                completion(false, "Access denied: Email does not belong to the selected role")
+//            }
+//        }
+//    }
     
     @MainActor
     //    private func resetPassword() {

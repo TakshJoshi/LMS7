@@ -1,4 +1,3 @@
-
 import SwiftUI
 import FirebaseAuth
 import FirebaseFirestore
@@ -16,6 +15,9 @@ struct SignupAuthentication: View {
     @State private var errorMessage = ""
     @State private var isPasswordVisible = false
     @State private var isConfirmPasswordVisible = false
+    
+    @State private var isSignupSuccessful = false
+    @State private var navigateTo2FA = false
     
     let genders = ["Male", "Female", "Others"]
     
@@ -76,37 +78,76 @@ struct SignupAuthentication: View {
             }
             .padding()
         }
+        .fullScreenCover(isPresented: $navigateTo2FA) {
+            TwoFactorAuthenticationView(role: "user", email: email)
+        }
         .navigationTitle("Create Account")
         .navigationBarTitleDisplayMode(.large)
     }
+
+
     
-        func signUp() {
-            guard password == confirmPassword else {
-                errorMessage = "Passwords do not match"
+    func signUp() {
+        guard password == confirmPassword else {
+            errorMessage = "Passwords do not match"
+            return
+        }
+
+        Auth.auth().createUser(withEmail: email, password: password) { authResult, error in
+            if let error = error {
+                errorMessage = error.localizedDescription
                 return
             }
-    
-            Auth.auth().createUser(withEmail: email, password: password) { authResult, error in
+
+            // Ensure user exists
+            guard let user = authResult?.user else { return }
+            
+            let db = Firestore.firestore()
+            let userData: [String: Any] = [
+                "userId": user.uid,  // ✅ Store userId explicitly
+                "fullName": fullName,
+                "username": username,
+                "mobileNumber": mobileNumber,
+                "gender": selectedGender,
+                "email": email,
+                "genre":  "NA",
+                "language": "NA"
+            ]
+            
+            // Save user data to Firestore
+            db.collection("users").document(user.uid).setData(userData) { error in
                 if let error = error {
-                    errorMessage = error.localizedDescription
+                    errorMessage = "Failed to save user data: \(error.localizedDescription)"
                     return
                 }
-    
-                guard let user = authResult?.user else { return }
-                let db = Firestore.firestore()
-                db.collection("users").document(user.uid).setData([
-                    "fullName": fullName,
-                    "username": username,
-                    "mobileNumber": mobileNumber,
-                    "gender": selectedGender,
-                    "email": email
-                ]) { error in
-                    if let error = error {
-                        errorMessage = "Failed to save user data: \(error.localizedDescription)"
+
+                // ✅ Generate and Send OTP
+                FirebaseManager.shared.generateAndSendOTP(email: email) { success, message in
+                    if success {
+                        print("✅ OTP Sent Successfully: \(message)")
+                        navigateTo2FA = true
+                        UserDefaults.standard.set(user.uid, forKey: "userId")
+                        
+                        sendWelcomeEmail(to: email) { success, message in
+                            if success {
+                                print("✅ \(message)")
+                            } else {
+                                print("❌ \(message)")
+                            }
+                        }
+                        
+                        // ✅ Navigate to OTP Verification Screen
+                       
+                        
+                    } else {
+                        print("❌ Failed to Send OTP: \(message)")
+                        errorMessage = message
                     }
                 }
             }
         }
+    }
+
 
 
     private func sendWelcomeEmail(to email: String, completion: @escaping (Bool, String) -> Void) {
