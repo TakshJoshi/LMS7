@@ -460,7 +460,3 @@ struct ImagePickerr: UIViewControllerRepresentable {
         }
     }
 } 
-
-#Preview{
-    ProfileView()
-}

@@ -200,7 +200,7 @@ struct libUsersView: View {
         }
         .sheet(isPresented: $showEditUserSheet) {
             if let user = selectedUser {
-                UserDetailView(user: user)
+                //UserDetailView(user: user)
             }
         }
     }
@@ -225,91 +225,91 @@ struct libUsersView: View {
 }
 
 // User Detail View for Editing
-struct UserDetailView: View {
-    @StateObject private var userManager = UserManager()
-    @Environment(\.dismiss) private var dismiss
-    
-    let user: LibraryUser
-    @State private var firstName: String
-    @State private var lastName: String
-    @State private var email: String
-    @State private var dob: String
-    @State private var role: String
-    
-    init(user: LibraryUser) {
-        self.user = user
-        _firstName = State(initialValue: user.firstName)
-        _lastName = State(initialValue: user.lastName)
-        _email = State(initialValue: user.email)
-        _dob = State(initialValue: user.dob)
-        _role = State(initialValue: user.role)
-    }
-    
-    var body: some View {
-        NavigationView {
-            Form {
-                Section(header: Text("Personal Information")) {
-                    TextField("First Name", text: $firstName)
-                    TextField("Last Name", text: $lastName)
-                    TextField("Email", text: $email)
-                    TextField("Date of Birth", text: $dob)
-                }
-                
-                Section(header: Text("Account Details")) {
-                    Picker("Role", selection: $role) {
-                        Text("User").tag("user")
-                        Text("Admin").tag("admin")
-                    }
-                }
-                
-                Section {
-                    Button("Update User") {
-                        updateUser()
-                    }
-                    
-                    Button("Delete User", role: .destructive) {
-                        deleteUser()
-                    }
-                }
-            }
-            .navigationTitle("User Details")
-            .navigationBarItems(trailing: Button("Close") {
-                dismiss()
-            })
-        }
-    }
-    
-    private func updateUser() {
-        userManager.updateUser(
-            userId: user.userId,
-            firstName: firstName,
-            lastName: lastName,
-            email: email,
-            dob: dob,
-            role: role
-        ) { result in
-            switch result {
-            case .success:
-                print("User updated successfully")
-                dismiss()
-            case .failure(let error):
-                print("Error updating user: \(error.localizedDescription)")
-            }
-        }
-    }
-    
-    private func deleteUser() {
-        userManager.deleteUser(userId: user.userId) { result in
-            switch result {
-            case .success:
-                print("User deleted successfully")
-                dismiss()
-            case .failure(let error):
-                print("Error deleting user: \(error.localizedDescription)")
-            }
-        }
-    }
-}
+//struct UserDetailView: View {
+//    @StateObject private var userManager = UserManager()
+//    @Environment(\.dismiss) private var dismiss
+//    
+//    let user: LibraryUser
+//    @State private var firstName: String
+//    @State private var lastName: String
+//    @State private var email: String
+//    @State private var dob: String
+//    @State private var role: String
+//    
+//    init(user: LibraryUser) {
+//        self.user = user
+//        _firstName = State(initialValue: user.firstName)
+//        _lastName = State(initialValue: user.lastName)
+//        _email = State(initialValue: user.email)
+//        _dob = State(initialValue: user.dob)
+//        _role = State(initialValue: user.role)
+//    }
+//    
+//    var body: some View {
+//        NavigationView {
+//            Form {
+//                Section(header: Text("Personal Information")) {
+//                    TextField("First Name", text: $firstName)
+//                    TextField("Last Name", text: $lastName)
+//                    TextField("Email", text: $email)
+//                    TextField("Date of Birth", text: $dob)
+//                }
+//                
+//                Section(header: Text("Account Details")) {
+//                    Picker("Role", selection: $role) {
+//                        Text("User").tag("user")
+//                        Text("Admin").tag("admin")
+//                    }
+//                }
+//                
+//                Section {
+//                    Button("Update User") {
+//                        updateUser()
+//                    }
+//                    
+//                    Button("Delete User", role: .destructive) {
+//                        deleteUser()
+//                    }
+//                }
+//            }
+//            .navigationTitle("User Details")
+//            .navigationBarItems(trailing: Button("Close") {
+//                dismiss()
+//            })
+//        }
+//    }
+//    
+//    private func updateUser() {
+//        userManager.updateUser(
+//            userId: user.userId,
+//            firstName: firstName,
+//            lastName: lastName,
+//            email: email,
+//            dob: dob,
+//            role: role
+//        ) { result in
+//            switch result {
+//            case .success:
+//                print("User updated successfully")
+//                dismiss()
+//            case .failure(let error):
+//                print("Error updating user: \(error.localizedDescription)")
+//            }
+//        }
+//    }
+//    
+//    private func deleteUser() {
+//        userManager.deleteUser(userId: user.userId) { result in
+//            switch result {
+//            case .success:
+//                print("User deleted successfully")
+//                dismiss()
+//            case .failure(let error):
+//                print("Error deleting user: \(error.localizedDescription)")
+//            }
+//        }
+//    }
+//}
 
 // Retain existing structs from the original view
 struct UsersHeaderView: View {

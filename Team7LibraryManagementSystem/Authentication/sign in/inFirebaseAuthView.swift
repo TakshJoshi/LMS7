@@ -132,8 +132,9 @@ struct FirebaseAuthView: View {
                 case .success(let role):
                     let lowercasedRole = role.lowercased()
                     let selectedRole = userRole.lowercased()
+                    let lowercaseEmail = email.lowercased()
                     
-                    verifyUserRole(email: email, role: selectedRole) { isValid, message in
+                    verifyUserRole(email: lowercaseEmail, role: selectedRole) { isValid, message in
                         if isValid {
                             fetchUserId(email: email,role:selectedRole) { userId in
                                 if let userId = userId {

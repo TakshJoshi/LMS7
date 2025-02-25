@@ -20,6 +20,11 @@ struct LibrarianTabView: View {
                         Label("Books", systemImage: "book")
                     }
                 
+                AddIssueBookView()
+                    .tabItem {
+                        Label("Issue Book", systemImage: "book")
+                    }
+                
                 LiveEventsView()
                     .tabItem {
                         Label("Events", systemImage: "calendar")

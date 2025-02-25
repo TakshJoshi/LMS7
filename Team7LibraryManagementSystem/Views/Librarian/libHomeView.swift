@@ -326,7 +326,7 @@ struct LibraryActivity: Identifiable {
 
 struct IssueBookCard: View {
     var body: some View {
-        NavigationLink(destination: IssuedBooksView()) {
+        NavigationLink(destination: AddIssueBookView()) {
             VStack(alignment: .leading, spacing: 8) {
                 Image(systemName: "plus")
                     .foregroundColor(.blue)

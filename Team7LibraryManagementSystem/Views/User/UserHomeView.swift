@@ -16,7 +16,7 @@ struct UserHomeView: View {
             }
 
             NavigationStack {
-                MyBooksScreen()
+                MyBooksView()
             }
             .tabItem {
                 Image(systemName: "book.fill")
