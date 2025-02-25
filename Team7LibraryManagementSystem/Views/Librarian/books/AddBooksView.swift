@@ -19,6 +19,9 @@ struct AddBookView: View {
     @State private var errorMessage: String?
     @State private var showAlert = false
     @State private var showingAddBook = false
+    @State private var selectedLibrary: String = ""
+    @State private var libraries: [Library] = []
+    @State private var librarian: Librarian?
     
     var body: some View {
         NavigationStack {
@@ -43,12 +46,16 @@ struct AddBookView: View {
                         .padding()
                 } else if let selectedBook = selectedBook {
                     // Selected Book Details View
+                    // In AddBookView where you create BookDetailsView
                     BookDetailsView(
                         book: selectedBook,
                         quantity: $quantity,
                         location: $location,
+                        selectedLibrary: $selectedLibrary, // Pass the binding
+                        libraries: libraries, // Pass the libraries array
                         onSave: addBookToLibrary,
                         onCancel: { self.selectedBook = nil }
+                    
                     )
                 } else {
                     // Search Results
@@ -70,9 +77,61 @@ struct AddBookView: View {
             .sheet(isPresented: $showingAddBook) {
                 AddBookView()
             }
+        }.onAppear {
+            fetchLibraries()
+            fetchLibrarianData()
         }
     }
-    
+    private func fetchLibraries() {
+        let db = Firestore.firestore()
+        db.collection("libraries").getDocuments { snapshot, error in
+            if let error = error {
+                print("Error fetching libraries: \(error.localizedDescription)")
+                self.errorMessage = "Error loading libraries: \(error.localizedDescription)"
+                self.showAlert = true
+                return
+            }
+            
+            guard let documents = snapshot?.documents else {
+                print("No libraries found")
+                return
+            }
+            
+            self.libraries = documents.compactMap { document in
+                try? document.data(as: Library.self)
+            }
+            
+            // Set default library if available
+            if let firstLibrary = libraries.first, self.selectedLibrary.isEmpty {
+                self.selectedLibrary = firstLibrary.id ?? ""
+            }
+        }
+    }
+    private func fetchLibrarianData() {
+        guard let userId = UserDefaults.standard.string(forKey: "userId") else {
+            print("User ID not found")
+            return
+        }
+        
+        let db = Firestore.firestore()
+        db.collection("librarians").whereField("userId", isEqualTo: userId).getDocuments { snapshot, error in
+            if let error = error {
+                print("Error fetching librarian data: \(error.localizedDescription)")
+                return
+            }
+            
+            guard let document = snapshot?.documents.first else {
+                print("Librarian document not found")
+                return
+            }
+            
+            do {
+                self.librarian = try document.data(as: Librarian.self)
+            } catch {
+                print("Error decoding librarian data: \(error.localizedDescription)")
+            }
+        }
+    }
     private func searchBooks() {
         guard !searchQuery.isEmpty else { return }
         isSearching = true
@@ -138,8 +197,10 @@ struct AddBookView: View {
                             status: "available",
                             totalCheckouts: 0,
                             currentlyBorrowed: 0,
-                            isAvailable: true
+                            isAvailable: true,
+                            libraryId: nil  // Add this line with nil as placeholder
                         )
+                    
                     }
                     self.isSearching = false
                 } catch {
@@ -156,6 +217,16 @@ struct AddBookView: View {
         guard let book = selectedBook else { return }
         guard let quantityInt = Int(quantity), quantityInt > 0 else {
             errorMessage = "Please enter a valid quantity"
+            showAlert = true
+            return
+        }
+        guard !selectedLibrary.isEmpty else {
+            errorMessage = "Please select a library"
+            showAlert = true
+            return
+        }
+        guard let librarianData = librarian else {
+            errorMessage = "Librarian data not available"
             showAlert = true
             return
         }
@@ -183,11 +254,17 @@ struct AddBookView: View {
             
             "totalCheckouts": 0,
             "currentlyBorrowed": 0,
-            "isAvailable": true
+            "isAvailable": true,
+            
+            // Add these new fields
+            "libraryId": selectedLibrary,
+            "addedBy": librarianData.id,
+            "addedByName": librarianData.fullName
         ]
         
         db.collection("books")
             .whereField("isbn13", isEqualTo: book.isbn13 ?? "")
+            .whereField("libraryId", isEqualTo: selectedLibrary)
             .getDocuments { snapshot, error in
                 if let error = error {
                     self.errorMessage = "Error checking book: \(error.localizedDescription)"
@@ -202,7 +279,9 @@ struct AddBookView: View {
                     existingBook.reference.updateData([
                         "quantity": currentQuantity + quantityInt,
                         "availableQuantity": currentAvailable + quantityInt,
-                        "lastUpdated": Timestamp()
+                        "lastUpdated": Timestamp(),
+                        "updatedBy": librarianData.id,
+                        "updatedByName": librarianData.fullName
                     ]) { error in
                         if let error = error {
                             self.errorMessage = "Error updating book: \(error.localizedDescription)"
@@ -222,6 +301,8 @@ struct AddBookView: View {
                                 "totalCopies": quantityInt,
                                 "availableCopies": quantityInt,
                                 "location": location,
+                                "libraryId": selectedLibrary,
+                                "addedBy": librarianData.id,
                                 "lastInventoryDate": Timestamp()
                             ]
                             
@@ -229,136 +310,170 @@ struct AddBookView: View {
                                 if let error = error {
                                     print("Error creating inventory: \(error.localizedDescription)")
                                 }
-                                self.dismiss()
+                                
+                                // Add transaction record
+                                let transactionData: [String: Any] = [
+                                    "bookId": book.id,
+                                    "bookTitle": book.title,
+                                    "transactionType": "book_added",
+                                    "quantity": quantityInt,
+                                    "performedBy": librarianData.id,
+                                    "performedByName": librarianData.fullName,
+                                    "libraryId": selectedLibrary,
+                                    "timestamp": Timestamp()
+                                ]
+                                
+                                db.collection("transactions").addDocument(data: transactionData) { error in
+                                    if let error = error {
+                                        print("Error recording transaction: \(error.localizedDescription)")
+                                    }
+                                    self.dismiss()
+                                }
                             }
                         }
                     }
                 }
             }
     }
-}
-
-struct SearchResultsView: View {
-    let searchResults: [Book]
-    let onBookSelect: (Book) -> Void
     
-    var body: some View {
-        if searchResults.isEmpty {
-            Text("No books found")
-                .foregroundColor(.gray)
-                .padding()
-        } else {
-            List(searchResults) { book in
-                Button(action: { onBookSelect(book) }) {
-                    HStack(spacing: 12) {
-                        // Book Cover with safe image loading
-                        if let imageUrl = book.getImageUrl() {
-                            AsyncImage(url: imageUrl) { image in
-                                image.resizable()
-                                    .aspectRatio(contentMode: .fit)
-                                    .frame(width: 60, height: 80)
-                            } placeholder: {
-                                Rectangle()
-                                    .fill(Color.gray.opacity(0.2))
-                                    .frame(width: 60, height: 80)
+    struct SearchResultsView: View {
+        let searchResults: [Book]
+        let onBookSelect: (Book) -> Void
+        
+        var body: some View {
+            if searchResults.isEmpty {
+                Text("No books found")
+                    .foregroundColor(.gray)
+                    .padding()
+            } else {
+                List(searchResults) { book in
+                    Button(action: { onBookSelect(book) }) {
+                        HStack(spacing: 12) {
+                            // Book Cover with safe image loading
+                            if let imageUrl = book.getImageUrl() {
+                                AsyncImage(url: imageUrl) { image in
+                                    image.resizable()
+                                        .aspectRatio(contentMode: .fit)
+                                        .frame(width: 60, height: 80)
+                                } placeholder: {
+                                    Rectangle()
+                                        .fill(Color.gray.opacity(0.2))
+                                        .frame(width: 60, height: 80)
+                                }
+                                .cornerRadius(4)
                             }
-                            .cornerRadius(4)
+                            
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(book.title)
+                                    .font(.headline)
+                                if !book.authors.isEmpty {
+                                    Text(book.authors.joined(separator: ", "))
+                                        .font(.subheadline)
+                                        .foregroundColor(.gray)
+                                }
+                                if let publisher = book.publisher {
+                                    Text(publisher)
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                }
+                            }
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+        }
+    }
+    struct BookDetailsView: View {
+        let book: Book
+        @Binding var quantity: String
+        @Binding var location: String
+        @Binding var selectedLibrary: String // Add this binding
+        let libraries: [Library] // Add this property
+        let onSave: () -> Void
+        let onCancel: () -> Void
+        
+        var body: some View {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    // Book Cover
+                    BookImageView(
+                        url: book.getImageUrl(),
+                        width: UIScreen.main.bounds.width - 32,
+                        height: 300
+                    )
+                    
+                    // Book Details
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(book.title)
+                            .font(.title)
+                            .fontWeight(.bold)
+                        
+                        Text("By " + book.authors.joined(separator: ", "))
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                        
+                        if let publisher = book.publisher {
+                            Text("Publisher: \(publisher)")
+                                .font(.subheadline)
                         }
                         
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(book.title)
-                                .font(.headline)
-                            if !book.authors.isEmpty {
-                                Text(book.authors.joined(separator: ", "))
-                                    .font(.subheadline)
-                                    .foregroundColor(.gray)
-                            }
-                            if let publisher = book.publisher {
-                                Text(publisher)
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
-                            }
+                        if let publishedDate = book.publishedDate {
+                            Text("Published: \(publishedDate)")
+                                .font(.subheadline)
+                        }
+                        
+                        if let isbn = book.isbn13 {
+                            Text("ISBN: \(isbn)")
+                                .font(.subheadline)
                         }
                     }
+                    .padding(.horizontal)
+                    
+                    // Quantity and Location Inputs
+                    VStack(spacing: 15) {
+                        TextField("Quantity", text: $quantity)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .keyboardType(.numberPad)
+                                        
+                        TextField("Shelf Location", text: $location)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                                    
+                        Picker("Select Library", selection: $selectedLibrary) {
+                            ForEach(libraries) { library in
+                                Text(library.name)
+                                    .tag(library.id ?? "")
+                                }
+                            }
+                        .pickerStyle(MenuPickerStyle())
+                        .padding(.vertical, 8)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(8)
+                    }
+                    .padding()
+                    
+                    
+                    // Action Buttons
+                    HStack {
+                        Button("Cancel") {
+                            onCancel()
+                        }
+                        .foregroundColor(.red)
+                        
+                        Spacer()
+                        
+                        Button("Add to Library") {
+                            onSave()
+                        }
+                        .disabled(quantity.isEmpty || location.isEmpty)
+                    }
+                    .padding()
+                    
                 }
-                .padding(.vertical, 4)
+                
             }
         }
     }
-}
-struct BookDetailsView: View {
-    let book: Book
-    @Binding var quantity: String
-    @Binding var location: String
-    let onSave: () -> Void
-    let onCancel: () -> Void
     
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                // Book Cover
-                BookImageView(
-                    url: book.getImageUrl(),
-                    width: UIScreen.main.bounds.width - 32,
-                    height: 300
-                )
-                
-                // Book Details
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(book.title)
-                        .font(.title)
-                        .fontWeight(.bold)
-                    
-                    Text("By " + book.authors.joined(separator: ", "))
-                        .font(.headline)
-                        .foregroundColor(.secondary)
-                    
-                    if let publisher = book.publisher {
-                        Text("Publisher: \(publisher)")
-                            .font(.subheadline)
-                    }
-                    
-                    if let publishedDate = book.publishedDate {
-                        Text("Published: \(publishedDate)")
-                            .font(.subheadline)
-                    }
-                    
-                    if let isbn = book.isbn13 {
-                        Text("ISBN: \(isbn)")
-                            .font(.subheadline)
-                    }
-                }
-                .padding(.horizontal)
-                
-                // Quantity and Location Inputs
-                VStack(spacing: 15) {
-                    TextField("Quantity", text: $quantity)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .keyboardType(.numberPad)
-                    
-                    TextField("Shelf Location", text: $location)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                }
-                .padding()
-                
-                // Action Buttons
-                HStack {
-                    Button("Cancel") {
-                        onCancel()
-                    }
-                    .foregroundColor(.red)
-                    
-                    Spacer()
-                    
-                    Button("Add to Library") {
-                        onSave()
-                    }
-                    .disabled(quantity.isEmpty || location.isEmpty)
-                }
-                .padding()
-            }
-        }
-    }
+    // Utility Image View
 }
-
-// Utility Image View

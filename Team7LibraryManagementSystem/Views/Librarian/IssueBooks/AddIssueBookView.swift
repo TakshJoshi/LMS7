@@ -1,4 +1,3 @@
-
 import SwiftUI
 import FirebaseFirestore
 
@@ -75,7 +74,7 @@ struct AddIssueBookView: View {
             }
         }
     }
-
+    
     
     func isRegisteredUser(email: String, completion: @escaping (Bool) -> Void) {
         let db = Firestore.firestore()
@@ -137,7 +136,8 @@ struct AddIssueBookView: View {
                 "isbn13": isbn13,
                 "issue_date": Timestamp(date: currentDate),
                 "due_date": Timestamp(date: dueDate),
-                "fine": 0
+                "fine": 0,
+                "status": "Borrowed" // Adding status field
             ] as [String: Any]
             
             isRegisteredUser(email: email) { isRegistered in
@@ -155,9 +155,7 @@ struct AddIssueBookView: View {
                                         message = "Error updating total checkouts: \(error.localizedDescription)"
                                     } else {
                                         message = "Book Issued Successfully!"
-                                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                                            dismiss()
-                                        }
+                                       
                                     }
                                 }
                             }

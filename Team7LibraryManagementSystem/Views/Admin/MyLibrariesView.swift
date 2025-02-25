@@ -22,7 +22,12 @@ struct MyLibrariesView: View {
         NavigationStack {
             VStack {
                 SearchBar2(searchText: $searchText)
-                
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2)) {
+                    LibraryStatCard(title: "Total Libraries",value: "\(libraries.count)",icon: "building")
+                    LibraryStatCard(title: "Total Books",value: "8",icon: "book")
+                }
+                .padding(.horizontal)
+                .cornerRadius(10)
                 ScrollView {
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
                         ForEach(filteredLibraries) { library in
@@ -134,6 +139,40 @@ struct SearchBar2: View {
         .padding(.horizontal)
         .padding(.bottom, 10)
     }
+}
+
+struct LibraryStatCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .center) {
+                Image(systemName: icon)
+                    .resizable()
+                    .frame(width: 34, height: 30)
+                    .aspectRatio(contentMode: .fit)
+                    .foregroundColor(.blue)
+            }
+            Text(value)
+                .font(.title2)
+                .fontWeight(.bold)
+                
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.gray)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.white))
+        .cornerRadius(10)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(.gray.opacity(0.2), lineWidth: 1.4)
+        )
+    }
+    
 }
 // MARK: - Preview
 struct MyLibraryView_Previews: PreviewProvider {

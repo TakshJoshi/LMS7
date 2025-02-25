@@ -72,14 +72,17 @@ struct Book: Identifiable, Codable {
     let totalCheckouts: Int
     let currentlyBorrowed: Int
     let isAvailable: Bool
+    let libraryId: String? // Add this property
+
 
     // Map Firestore fields correctly
     enum CodingKeys: String, CodingKey {
-        case id = "bookId" // Maps Firestore "bookId" → Swift "id"
-        case title, authors, publisher, publishedDate, description
-        case pageCount, categories, coverImageUrl, isbn13, language
-        case quantity, availableQuantity, location, status, totalCheckouts, currentlyBorrowed, isAvailable
-    }
+            case id = "bookId"
+            case title, authors, publisher, publishedDate, description
+            case pageCount, categories, coverImageUrl, isbn13, language
+            case quantity, availableQuantity, location, status, totalCheckouts, currentlyBorrowed, isAvailable
+            case libraryId
+        }
 
     func getImageUrl() -> URL? {
         guard let coverImageUrl = coverImageUrl,

@@ -100,18 +100,7 @@ struct AddAdminView: View {
                         .padding(.horizontal)
                     
                     // Create Button
-                    Button(action: registerAdmin) {
-                        Text(isLoading ? "Adding..." : "Create Administrator")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.blue)
-                            .cornerRadius(12)
-                            .padding(.horizontal)
-                    }
-                    .disabled(isLoading)
-                    .padding(.bottom, 30)
+                    
 
                     if !errorMessage.isEmpty {
                         Text(errorMessage)
@@ -122,7 +111,21 @@ struct AddAdminView: View {
             }
             .navigationTitle("Add New Administrator")
             .navigationBarTitleDisplayMode(.inline)
-            
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: registerAdmin) {
+                        if isLoading {
+                            ProgressView()
+                                .tint(.blue)
+                        } else {
+                            Text("Save")
+                                .bold()
+                                .foregroundColor(.blue)
+                        }
+                    }
+                    .disabled(isLoading)
+                }
+            }
         }
     }
 

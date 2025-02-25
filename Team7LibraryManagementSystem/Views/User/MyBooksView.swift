@@ -87,7 +87,8 @@ struct MyBooksView: View {
                     status: data["status"] as? String ?? "Unknown",
                     totalCheckouts: data["totalCheckouts"] as? Int ?? 0,
                     currentlyBorrowed: data["currentlyBorrowed"] as? Int ?? 0,
-                    isAvailable: data["isAvailable"] as? Bool ?? false
+                    isAvailable: data["isAvailable"] as? Bool ?? false,
+                    libraryId: data["libraryId"] as? String 
                 )
             } ?? []
         }

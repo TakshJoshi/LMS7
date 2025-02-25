@@ -191,7 +191,8 @@ struct libHomeView: View {
                     status: data["status"] as? String ?? "available",
                     totalCheckouts: data["totalCheckouts"] as? Int ?? 0,
                     currentlyBorrowed: data["currentlyBorrowed"] as? Int ?? 0,
-                    isAvailable: data["isAvailable"] as? Bool ?? true
+                    isAvailable: data["isAvailable"] as? Bool ?? true,
+                    libraryId: data["libraryId"] as? String 
                 )
             }
         }

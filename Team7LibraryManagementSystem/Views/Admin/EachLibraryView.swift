@@ -7,106 +7,148 @@ struct EachLibraryView: View {
     @State private var isAddingLibrarian = false  // Controls modal presentation
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    // Header
-                    HStack {
-                        Spacer()
-                        Text(library.name)
-                            .font(.title2).bold()
-                        Spacer()
-                        Image(systemName: "pencil")
-                            .foregroundColor(.blue)
-                    }
-                    .padding(.horizontal)
-
-                    // Library Image Placeholder
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                // Header Image with Library Name
+                ZStack(alignment: .bottomLeading) {
+                    // Replace with actual image if available, or use a placeholder
                     Image(systemName: "photo.fill")
                         .resizable()
-                        .scaledToFit()
-                        .cornerRadius(10)
-                        .frame(height: 150)
-                        .padding(.horizontal, 120)
-
-                    // Library Details
-                    VStack(alignment: .leading, spacing: 8) {
+                        .scaledToFill()
+                        .frame(height: 200)
+                        .clipped()
+                        .foregroundColor(.gray)
+                    
+                    HStack {
                         Text(library.name)
-                            .font(.title2).bold()
-                        Text("Location: \(library.address.line1), \(library.address.city), \(library.address.state) \(library.address.zipCode)")
-                        Text("Operating Hours: Weekdays: \(library.operationalHours.weekday.opening) - \(library.operationalHours.weekday.closing)\nWeekends: \(library.operationalHours.weekend.opening) - \(library.operationalHours.weekend.closing)")
-                        Text("Phone: \(library.contact.phone)\nEmail: \(library.contact.email)")
-                        Text("Total Staff: \(library.staff.totalStaff)")
+                            .font(.title2)
                             .bold()
+                            .foregroundColor(.black)
+                        Spacer()
+                        
+                        // Rating or additional info could go here
+                        HStack {
+                            Image(systemName: "building.columns")
+                                .foregroundColor(.blue)
+                            Text(library.code)
+                                .foregroundColor(.black)
+                        }
                     }
                     .padding()
-                    .background(RoundedRectangle(cornerRadius: 10).fill(Color(.systemBackground)))
-                    .shadow(radius: 2)
-                    .padding(.horizontal)
-
-                    // Librarians Section
-                    VStack(alignment: .leading) {
-                        Text("Current Librarians")
-                            .font(.headline)
-
-                        if librarians.isEmpty {
+                    .background(Color.white.opacity(0.9))
+                }
+                .frame(maxWidth: .infinity)
+                .background(Color.gray.opacity(0.2))
+                
+                // About Section
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("About")
+                        .font(.headline)
+                    
+                    Text(library.description)
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                    
+                    EachInfoRow(icon: "mappin.circle", title: "Location", value: "\(library.address.line1), \(library.address.city)")
+                    EachInfoRow(icon: "phone.circle", title: "Contact", value: library.contact.phone)
+                    EachInfoRow(icon: "envelope", title: "Email", value: library.contact.email)
+                    EachInfoRow(icon: "globe", title: "Website", value: library.contact.website)
+                }
+                .padding(.horizontal)
+                
+                // Statistics Grid
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Operating Information")
+                        .font(.headline)
+                        .padding(.leading)
+                    
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                        StatisticCard(icon: "clock", title: "Weekday Hours", value: "\(library.operationalHours.weekday.opening) - \(library.operationalHours.weekday.closing)", change: nil)
+                        StatisticCard(icon: "clock", title: "Weekend Hours", value: "\(library.operationalHours.weekend.opening) - \(library.operationalHours.weekend.closing)", change: nil)
+                        StatisticCard(icon: "person.2.fill", title: "Total Staff", value: library.staff.totalStaff, change: nil)
+                        StatisticCard(icon: "person.fill.badge.plus", title: "Head Librarian", value: library.staff.headLibrarian, change: nil)
+                    }
+                }
+                .padding(.horizontal)
+                
+                // Library Staff Section
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Library Staff")
+                        .font(.headline)
+                    
+                    if librarians.isEmpty {
+                        HStack {
+                            Spacer()
                             Text("No librarians assigned to this library.")
                                 .foregroundColor(.gray)
                                 .italic()
-                        } else {
-                            ForEach(librarians) { librarian in
-                                LibrarianView(name: librarian.fullName, email: librarian.email, status: "Active", color: .green)
-                            }
+                                .padding()
+                            Spacer()
                         }
-
-                        Button(action: {
-                            isAddingLibrarian = true
-                        }) {
-                        HStack {
-                            Image(systemName: "plus.circle")
-                                Text("Add New Librarian")
-                            }
-                        .foregroundColor(.blue)
-                        }
-                    }
-                    .padding()
-                    .background(RoundedRectangle(cornerRadius: 10).fill(Color(.systemBackground)))
-                    .shadow(radius: 2)
-                    .padding(.horizontal)
-
-                    // Stats Section
-                    VStack(spacing: 10) {
-                        HStack {
-                            LibStatCard(title: "Active Users", value: "1,245", change: "+5.2%")
-                            LibStatCard(title: "New Users", value: "89", change: "+12.3%")
-                        }
-                        HStack {
-                            LibStatCard(title: "Fine Collected", value: "$2,890", change: "+8.1%")
-                            LibStatCard(title: "Pending Fines", value: "$750", change: "-2.4%")
+                        .background(Color(.systemGray6))
+                        .cornerRadius(10)
+                    } else {
+                        ForEach(librarians) { librarian in
+                            StaffRow(
+                                name: librarian.fullName,
+                                email: librarian.email,
+                                status: librarian.isSuspended ? "Suspended" : "Active",
+                                statusColor: librarian.isSuspended ? .red : .green
+                            )
                         }
                     }
-                    .padding(.horizontal)
-
-                    // Library Performance
-                    VStack(alignment: .leading) {
-                        Text("Library Performance")
-                            .font(.headline)
-                        PerformanceRow(title: "Books in Circulation", value: "3,567")
-                        PerformanceRow(title: "Most Borrowed Category", value: "Fiction (32%)")
-                        PerformanceRow(title: "Peak Hours", value: "2:00 PM - 5:00 PM")
-                    }
-                    .padding()
-                    .background(RoundedRectangle(cornerRadius: 10).fill(Color(.systemBackground)))
-                    .shadow(radius: 2)
-                    .padding(.horizontal)
                 }
-                .padding(.vertical)
+                .padding(.horizontal)
+                
+                // Library Features
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Features")
+                        .font(.headline)
+                    
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                        FeatureCard(icon: "wifi", title: "WiFi", available: library.features.wifi)
+                        FeatureCard(icon: "desktopcomputer", title: "Computer Lab", available: library.features.computerLab)
+                        FeatureCard(icon: "person.3.fill", title: "Meeting Rooms", available: library.features.meetingRooms)
+                        FeatureCard(icon: "car.fill", title: "Parking", available: library.features.parking)
+                    }
+                }
+                .padding(.horizontal)
+                
+                // Library Settings
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Library Policies")
+                        .font(.headline)
+                    
+                    PerformanceRow(
+                        icon: "book.closed",
+                        title: "Max Books Per Member",
+                        value: library.settings.maxBooksPerMember,
+                        subtitle: "Borrowing limit"
+                    )
+                    
+                    PerformanceRow(
+                        icon: "dollarsign.circle",
+                        title: "Late Fee",
+                        value: library.settings.lateFee,
+                        subtitle: "Per overdue day"
+                    )
+                    
+                    PerformanceRow(
+                        icon: "calendar",
+                        title: "Lending Period",
+                        value: library.settings.lendingPeriod,
+                        subtitle: "Standard borrowing time"
+                    )
+                }
+                .padding(.horizontal)
             }
+            .padding(.vertical)
         }
+        .navigationTitle("Library Details")
+        .navigationBarTitleDisplayMode(.inline)
         .onAppear { fetchLibrarians() }
         .sheet(isPresented: $isAddingLibrarian) {
             AddLibrarianView()
-            .interactiveDismissDisabled()  // Prevent swipe down to dismiss
         }
     }
 
@@ -126,6 +168,154 @@ struct EachLibraryView: View {
                     try? doc.data(as: Librarian.self)
                 }
             }
+    }
+}
+
+// Feature Card Component
+struct FeatureCard: View {
+    let icon: String
+    let title: String
+    let available: Bool
+    
+    var body: some View {
+        HStack {
+            Image(systemName: icon)
+                .foregroundColor(available ? .blue : .gray)
+            
+            Text(title)
+                .font(.subheadline)
+            
+            Spacer()
+            
+            Image(systemName: available ? "checkmark.circle.fill" : "xmark.circle.fill")
+                .foregroundColor(available ? .green : .red)
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(10)
+        
+    }
+}
+
+// Staff Row Component
+struct StaffRow: View {
+    let name: String
+    let email: String
+    let status: String
+    let statusColor: Color
+    
+    var body: some View {
+        HStack {
+            Image(systemName: "person.crop.circle.fill")
+                .font(.title2)
+                .foregroundColor(.gray)
+            
+            VStack(alignment: .leading) {
+                Text(name)
+                    .font(.headline)
+                Text(email)
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+            }
+            
+            Spacer()
+            
+            Text(status)
+                .font(.footnote)
+                .foregroundColor(statusColor)
+        }
+        .padding(16)
+        .background(Color(.systemGray6))
+        .cornerRadius(10)
+    }
+}
+
+// Info Row Component
+struct EachInfoRow: View {
+    let icon: String
+    let title: String
+    let value: String
+    
+    var body: some View {
+        HStack {
+            Image(systemName: icon)
+                .foregroundColor(.blue)
+            
+            VStack(alignment: .leading) {
+                Text(title)
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+                
+                Text(value)
+                    .font(.body)
+            }
+            
+            Spacer()
+        }
+    }
+}
+
+// Statistic Card Component
+struct StatisticCard: View {
+    let icon: String
+    let title: String
+    let value: String
+    let change: String?
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Image(systemName: icon)
+                    .foregroundColor(.blue)
+                
+                Text(title)
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+            }
+            
+            Text(value)
+                .font(.title3)
+                .bold()
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, minHeight: 100)
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+    }
+}
+
+// Performance Row Component
+struct PerformanceRow: View {
+    let icon: String
+    let title: String
+    let value: String
+    let subtitle: String
+    
+    var body: some View {
+        HStack {
+            Image(systemName: icon)
+                .foregroundColor(.blue)
+            
+            VStack(alignment: .leading) {
+                Text(title)
+                    .font(.subheadline)
+                
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundColor(.gray)
+            }
+            
+            Spacer()
+            
+            Text(value)
+                .font(.body)
+                .bold()
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
     }
 }
 
@@ -172,19 +362,19 @@ struct LibStatCard: View {
     }
 }
 
-struct PerformanceRow: View {
-    let title: String
-    let value: String
-
-    var body: some View {
-        HStack {
-            Text(title).font(.subheadline).foregroundColor(.gray)
-            Spacer()
-            Text(value).font(.subheadline).bold()
-        }
-        .padding(.vertical, 5)
-    }
-}
+//struct PerformanceRow: View {
+//    let title: String
+//    let value: String
+//
+//    var body: some View {
+//        HStack {
+//            Text(title).font(.subheadline).foregroundColor(.gray)
+//            Spacer()
+//            Text(value).font(.subheadline).bold()
+//        }
+//        .padding(.vertical, 5)
+//    }
+//}
 
 struct EachLibraryView_Previews: PreviewProvider {
     static var previews: some View {

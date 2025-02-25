@@ -16,25 +16,45 @@ struct BooksView: View {
     @State private var selectedSort: SortOption = .title
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var currentLibrarianId: String = ""
+    @State private var assignedLibraryId: String = ""
     
     enum SortOption {
         case title, author, publishedDate
     }
     
+    // Add these debug print statements to the filteredBooks computed property
     var filteredBooks: [Book] {
-        let filtered = books.filter { book in
+        print("DEBUG: Assigned Library ID: \(assignedLibraryId)")
+        print("DEBUG: Total Books: \(books.count)")
+        
+        // First filter by library ID if it's available
+        let libraryFiltered = assignedLibraryId.isEmpty ? books : books.filter { book in
+            if let bookLibraryId = book.libraryId {
+                print("DEBUG: Comparing book \(book.title) - Book LibraryId: \(bookLibraryId), Assigned: \(assignedLibraryId)")
+                return bookLibraryId == assignedLibraryId
+            }
+            print("DEBUG: Book \(book.title) has no libraryId")
+            return false
+        }
+        
+        print("DEBUG: After library filtering: \(libraryFiltered.count) books")
+        
+        // Then apply search text filter
+        let textFiltered = libraryFiltered.filter { book in
             searchText.isEmpty ||
             book.title.localizedCaseInsensitiveContains(searchText) ||
             book.authors.contains { $0.localizedCaseInsensitiveContains(searchText) }
         }
         
+        // Finally sort
         switch selectedSort {
         case .title:
-            return filtered.sorted { $0.title < $1.title }
+            return textFiltered.sorted { $0.title < $1.title }
         case .author:
-            return filtered.sorted { $0.authors.first ?? "" < $1.authors.first ?? "" }
+            return textFiltered.sorted { $0.authors.first ?? "" < $1.authors.first ?? "" }
         case .publishedDate:
-            return filtered.sorted { $0.publishedDate ?? "" < $1.publishedDate ?? "" }
+            return textFiltered.sorted { $0.publishedDate ?? "" < $1.publishedDate ?? "" }
         }
     }
     
@@ -115,12 +135,67 @@ struct BooksView: View {
                 AddBookView()
             }
             .onAppear {
+                fetchLibrarianData()
                 fetchBooks()
             }
         }
     }
-    
-     func fetchBooks() {
+    private func fetchLibrarianData() {
+        guard let userId = UserDefaults.standard.string(forKey: "userId") else {
+            print("DEBUG: User ID not found")
+            return
+        }
+        
+        print("DEBUG: Fetching librarian data for userId: \(userId)")
+        
+        let db = Firestore.firestore()
+        db.collection("librarians").whereField("userId", isEqualTo: userId).getDocuments { snapshot, error in
+            if let error = error {
+                print("DEBUG: Error fetching librarian data: \(error.localizedDescription)")
+                return
+            }
+            
+            print("DEBUG: Found \(snapshot?.documents.count ?? 0) librarian documents")
+            
+            guard let document = snapshot?.documents.first else {
+                print("DEBUG: Librarian document not found")
+                return
+            }
+            
+            do {
+                if let librarian = try? document.data(as: Librarian.self) {
+                    self.currentLibrarianId = librarian.id
+                    print("DEBUG: Found librarian ID: \(librarian.id)")
+                    
+                    // Fetch the assigned library
+                    db.collection("librarian_assignments")
+                        .whereField("librarianId", isEqualTo: self.currentLibrarianId)
+                        .getDocuments { snapshot, error in
+                            if let error = error {
+                                print("DEBUG: Error fetching assignments: \(error.localizedDescription)")
+                                return
+                            }
+                            
+                            print("DEBUG: Found \(snapshot?.documents.count ?? 0) assignment documents")
+                            
+                            if let document = snapshot?.documents.first,
+                               let libraryId = document.data()["libraryId"] as? String {
+                                self.assignedLibraryId = libraryId
+                                print("DEBUG: Librarian assigned to library: \(libraryId)")
+                                
+                                // Force a UI refresh after setting the libraryId
+                                self.books = self.books
+                            } else {
+                                print("DEBUG: No library assignment found for librarian")
+                            }
+                        }
+                }
+            } catch {
+                print("DEBUG: Error decoding librarian data: \(error.localizedDescription)")
+            }
+        }
+    }
+    func fetchBooks() {
         isLoading = true
         errorMessage = nil
         
@@ -160,11 +235,15 @@ struct BooksView: View {
                     status: data["status"] as? String ?? "available",
                     totalCheckouts: data["totalCheckouts"] as? Int ?? 0,
                     currentlyBorrowed: data["currentlyBorrowed"] as? Int ?? 0,
-                    isAvailable: data["isAvailable"] as? Bool ?? true
+                    isAvailable: data["isAvailable"] as? Bool ?? true,
+                    libraryId: data["libraryId"] as? String // Add this line to capture libraryId
                 )
             }
         }
     }
+
+    // Update the onAppear modifier in body
+    
 }
 
 struct BookListView: View {
@@ -190,24 +269,7 @@ struct BookCard: View {
     var body: some View {
         VStack(alignment: .leading) {
             HStack(spacing: 12) {
-                // Book Cover with safe image loading
-//                if let imageUrl = book.coverImageUrl {
-//                    AsyncImage(url: imageUrl) { image in
-//                        image
-//                            .resizable()
-//                            .aspectRatio(contentMode: .fill)
-//                    } placeholder: {
-//                        Rectangle()
-//                            .fill(Color.gray.opacity(0.2))
-//                    }
-//                    .frame(width: 80, height: 120)bbbbb                                              b
-//                    .cornerRadius(8)
-//                } else {
-//                    Rectangle()
-//                        .fill(Color.gray.opacity(0.2))
-//                        .frame(width: 80, height: 120)
-//                        .cornerRadius(8)
-//                }
+               
                 
                 if let coverImageUrl = book.coverImageUrl,
                    let imageUrl = URL(string: coverImageUrl) {

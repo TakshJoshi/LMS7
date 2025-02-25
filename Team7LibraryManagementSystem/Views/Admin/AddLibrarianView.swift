@@ -15,7 +15,7 @@ struct AddLibrarianView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var showAlert = false
-    
+    @State private var libraryDictionary: [String: String] = [:]
     // Libraries fetched from Firestore
     @State private var libraries: [String] = []
     
@@ -47,6 +47,7 @@ struct AddLibrarianView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .center)
                     .listRowBackground(Color.clear)
+                    .padding(.top,-10)
                 }
                 
                 Section(header: Text("Personal Information")) {
@@ -145,18 +146,20 @@ struct AddLibrarianView: View {
                 
                 print("Total documents found: \(snapshot.documents.count)")
                 
-                libraries = snapshot.documents.compactMap { document in
+                // Clear existing data
+                libraries = []
+                libraryDictionary = [:]
+                
+                // Process each document
+                for document in snapshot.documents {
                     let data = document.data()
                     print("Document data: \(data)")
                     
-                    // Try different ways of extracting the library name
-                    let libraryName = data["name"] as? String ??
-                                      data["Name"] as? String ??
-                                      data["library_name"] as? String ??
-                                      data["libraryName"] as? String
-                    
-                    print("Extracted library name: \(libraryName ?? "nil")")
-                    return libraryName
+                    if let libraryName = data["name"] as? String {
+                        libraries.append(libraryName)
+                        libraryDictionary[libraryName] = document.documentID
+                        print("Added library: \(libraryName) with ID: \(document.documentID)")
+                    }
                 }
                 
                 print("Parsed libraries: \(libraries)")
@@ -172,6 +175,14 @@ struct AddLibrarianView: View {
     
     private func addLibrarian() {
         isLoading = true
+        
+        // Get the selected library ID
+        guard let selectedLibraryId = libraryDictionary[selectedLibrary] else {
+            isLoading = false
+            errorMessage = "Invalid library selection"
+            showAlert = true
+            return
+        }
         
         // First create Auth user
         Auth.auth().createUser(withEmail: email, password: password) { authResult, error in
@@ -197,7 +208,7 @@ struct AddLibrarianView: View {
                 "fullName": fullName,
                 "email": email,
                 "phone": phone,
-                "assignedLibrary": selectedLibrary,
+                "libraryId": selectedLibraryId, // Store the actual library ID
                 "isSuspended": false,
                 "isEmployee": true,
                 "role": "librarian",
