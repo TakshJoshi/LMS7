@@ -165,6 +165,10 @@ struct TwoFactorAuthenticationView: View {
                         .navigationBarBackButtonHidden(true)
                 }
                 else if(role == "user"){
+                    UserHomeView()
+                        .navigationBarBackButtonHidden(true)
+                }
+                else if(role == "signUpUser"){
                     GenreSelectionView()
                         .navigationBarBackButtonHidden(true)
                 }

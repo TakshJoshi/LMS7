@@ -33,36 +33,82 @@ struct MyBooksView: View {
             }
         }
     }
-    
-    /// Fetches issued books for the logged-in user
+//
 //    private func fetchIssuedBookISBNs() {
 //        let db = Firestore.firestore()
 //        guard let userEmail = Auth.auth().currentUser?.email else {
 //            print("No logged-in user found")
 //            return
 //        }
-//        
+//
+//        var allBooksData: [(String, String)] = []
+//        let dispatchGroup = DispatchGroup()
+//
+//        // Fetch issued books
+//        dispatchGroup.enter()
 //        db.collection("issued_books").whereField("email", isEqualTo: userEmail).getDocuments { snapshot, error in
 //            if let error = error {
 //                print("Error fetching issued book ISBNs: ", error)
-//                return
+//            } else {
+//                let issuedBooksData = snapshot?.documents.compactMap { doc -> (String, String)? in
+//                    if let isbn = doc.data()["isbn13"] as? String,
+//                       let status = doc.data()["status"] as? String {
+//                        return (isbn, status)
+//                    }
+//                    return nil
+//                } ?? []
+//
+//                allBooksData.append(contentsOf: issuedBooksData)
 //            }
-//            
-//            // Extract ISBNs and statuses from issued_books collection
-//            let issuedBooksData = snapshot?.documents.compactMap { doc -> (String, String)? in
-//                if let isbn = doc.data()["isbn13"] as? String,
-//                   let status = doc.data()["status"] as? String {
-//                    return (isbn, status)
-//                }
-//                return nil
-//            } ?? []
-//            
-//            fetchBookDetails(issuedBooksData)
+//            dispatchGroup.leave()
+//        }
+//
+//        // Fetch prebooked books
+//        dispatchGroup.enter()
+//        db.collection("PreBook").whereField("userEmail", isEqualTo: userEmail).getDocuments { snapshot, error in
+//            if let error = error {
+//                print("Error fetching prebooked books: ", error)
+//            } else {
+//                let prebookedBooksData = snapshot?.documents.compactMap { doc -> (String, String)? in
+//                    if let isbn = doc.data()["isbn13"] as? String,
+//                       var prebookStatus = doc.data()["status"] as? String,
+//                       let expiresAtTimestamp = doc.data()["expiresAt"] as? Timestamp {
+//
+//                        let currentTime = Timestamp(date: Date())
+//
+//                        // Check if expiresAt time has passed
+//                        if expiresAtTimestamp.seconds < currentTime.seconds && prebookStatus != "Confirmed" {
+//                            prebookStatus = "Time Over"
+//                            updatePreBookStatusToTimeOver(forEmail: userEmail, libraryId: <#T##String#>, completion: <#T##(Bool, Error?) -> Void#>)
+//                        } else {
+//                            // Determine display status based on prebook status
+//                            switch prebookStatus {
+//                            case "Pending":
+//                                prebookStatus = "PreBooked"
+//                            case "Confirmed":
+//                                prebookStatus = "PreBook Confirmed"
+//                            default:
+//                                prebookStatus = "Unknown"
+//                            }
+//                        }
+//
+//                        return (isbn, prebookStatus)
+//                    }
+//                    return nil
+//                } ?? []
+//
+//                allBooksData.append(contentsOf: prebookedBooksData)
+//            }
+//            dispatchGroup.leave()
+//        }
+//
+//        // Once both issued and prebooked books are fetched, retrieve their details
+//        dispatchGroup.notify(queue: .main) {
+//            fetchBookDetails(allBooksData)
 //        }
 //    }
-    
-    
-    /// Fetches both issued and prebooked books for the logged-in user
+//
+
     private func fetchIssuedBookISBNs() {
         let db = Firestore.firestore()
         guard let userEmail = Auth.auth().currentUser?.email else {
@@ -71,7 +117,6 @@ struct MyBooksView: View {
         }
         
         var allBooksData: [(String, String)] = []
-
         let dispatchGroup = DispatchGroup()
         
         // Fetch issued books
@@ -101,22 +146,35 @@ struct MyBooksView: View {
             } else {
                 let prebookedBooksData = snapshot?.documents.compactMap { doc -> (String, String)? in
                     if let isbn = doc.data()["isbn13"] as? String,
-                       let prebookStatus = doc.data()["status"] as? String {
-                        
-                        // Determine display status based on prebook status
-                        let displayStatus: String
-                        switch prebookStatus {
-                        case "Pending":
-                            displayStatus = "PreBooked"
-                        case "Time Over":
-                            displayStatus = "Not Collected"
-                        case "Confirmed":
-                            displayStatus = "PreBook Confirmed"
-                        default:
-                            displayStatus = "Unknown"
+                       var prebookStatus = doc.data()["status"] as? String,
+                       let expiresAtTimestamp = doc.data()["expiresAt"] as? Timestamp,
+                       let libraryId = doc.data()["libraryId"] as? String {  // Ensure libraryId is available
+
+                        let currentTime = Timestamp(date: Date())
+
+                        // Check if expiresAt time has passed
+                        if expiresAtTimestamp.seconds < currentTime.seconds && prebookStatus != "Confirmed" {
+                            prebookStatus = "Time Over"
+                            updatePreBookStatusToTimeOver(forEmail: userEmail, libraryId: libraryId) { success, error in
+                                if success {
+                                    print("Successfully updated PreBook status for ISBN: \(isbn)")
+                                } else {
+                                    print("Failed to update PreBook status for ISBN: \(isbn). Error: \(error?.localizedDescription ?? "Unknown error")")
+                                }
+                            }
+                        } else {
+                            // Determine display status based on prebook status
+                            switch prebookStatus {
+                            case "Pending":
+                                prebookStatus = "PreBooked"
+                            case "Confirmed":
+                                prebookStatus = "PreBook Confirmed"
+                            default:
+                                prebookStatus = "Unknown"
+                            }
                         }
                         
-                        return (isbn, displayStatus)
+                        return (isbn, prebookStatus)
                     }
                     return nil
                 } ?? []
@@ -131,6 +189,51 @@ struct MyBooksView: View {
             fetchBookDetails(allBooksData)
         }
     }
+
+    
+    func updatePreBookStatusToTimeOver(forEmail userEmail: String, libraryId: String, completion: @escaping (Bool, Error?) -> Void) {
+        let db = Firestore.firestore()
+        
+        let preBookRef = db.collection("PreBook")
+            .whereField("userEmail", isEqualTo: userEmail)
+            .whereField("libraryId", isEqualTo: libraryId)
+        
+        preBookRef.getDocuments { snapshot, error in
+            if let error = error {
+                print("Error fetching prebook document: \(error.localizedDescription)")
+                completion(false, error)
+                return
+            }
+            
+            guard let documents = snapshot?.documents, !documents.isEmpty else {
+                print("No matching PreBook document found.")
+                completion(false, nil)
+                return
+            }
+            
+            let currentTime = Timestamp(date: Date())
+            
+            for document in documents {
+                let docRef = document.reference
+                
+                if let expiresAt = document.data()["expiresAt"] as? Timestamp {
+                    if expiresAt.seconds < currentTime.seconds {
+                        // Update the status to "Time Over"
+                        docRef.updateData(["status": "Time Over"]) { error in
+                            if let error = error {
+                                print("Error updating document status: \(error.localizedDescription)")
+                                completion(false, error)
+                            } else {
+                                print("Successfully updated status to Time Over for document: \(document.documentID)")
+                                completion(true, nil)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
 
 //
     /// Fetches book details from the "books" collection using ISBNs
@@ -182,20 +285,7 @@ struct MyBooksView: View {
             issuedBooks = bookData
         }
     }
-    
-    /// Helper function to return color based on book status
-//    private func getStatusColor(for status: String) -> Color {
-//        switch status {
-//        case "Borrowed":
-//            return .green
-//        case "Returned":
-//            return .gray
-//        case "Overdue":
-//            return .red
-//        default:
-//            return .gray
-//        }
-//    }
+
     
     private func getStatusColor(for status: String) -> Color {
         switch status {

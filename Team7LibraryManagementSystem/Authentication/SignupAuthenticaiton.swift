@@ -18,6 +18,7 @@ struct SignupAuthentication: View {
     
     @State private var isSignupSuccessful = false
     @State private var navigateTo2FA = false
+    @State private var isLoading = false
     
     let genders = ["Male", "Female", "Others"]
     
@@ -50,7 +51,7 @@ struct SignupAuthentication: View {
                         Text(gender).tag(gender)
                     }
                 }
-                .padding(.horizontal,10)
+                .padding(.horizontal,20)
                 .cornerRadius(8)
                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.4), lineWidth: 1))
                 .tint(.primary)
@@ -72,30 +73,76 @@ struct SignupAuthentication: View {
                 Spacer()
                 Spacer()
                 
+                
                 Button(action: signUp) {
-                    Text("Create Account").frame(maxWidth: .infinity).padding().background(canSignUp ? Color.blue : Color.gray).foregroundColor(.white).cornerRadius(10)
-                }.disabled(!canSignUp)
+                    if isLoading {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    } else {
+                        Text("Create Account")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(canSignUp ? Color.blue : Color.gray)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                    }
+                }
+                .disabled(!canSignUp || isLoading)
             }
             .padding()
+            .opacity(isLoading ? 0.5 : 1.0)
+            .disabled(isLoading)
+            
+            // Full screen loading overlay
+            if isLoading {
+                Color.black.opacity(0.3)
+                    .edgesIgnoringSafeArea(.all)
+                
+                ProgressView("Creating Account...")
+                    .progressViewStyle(CircularProgressViewStyle(tint: .blue))
+                    .padding()
+                    .background(Color.white)
+                    .cornerRadius(10)
+            }
+               
+               
         }
         .fullScreenCover(isPresented: $navigateTo2FA) {
-            TwoFactorAuthenticationView(role: "user", email: email)
-        }
+               TwoFactorAuthenticationView(role: "signUpUser", email: email)
+           }
         .navigationTitle("Create Account")
         .navigationBarTitleDisplayMode(.large)
     }
 
 
+ 
     
     func signUp() {
+        // Add a loading state
+      //  @State private var isLoading = false
+        
+        // Disable user interaction and show loading
+        isLoading = true
+        
         guard password == confirmPassword else {
             errorMessage = "Passwords do not match"
+            isLoading = false
             return
         }
+        let lowercasedEmail = email.lowercased()
 
-        Auth.auth().createUser(withEmail: email, password: password) { authResult, error in
+        Auth.auth().createUser(withEmail: lowercasedEmail, password: password) { authResult, error in
+            defer {
+                // Ensure loading state is always turned off
+                DispatchQueue.main.async {
+                    isLoading = false
+                }
+            }
+            
             if let error = error {
-                errorMessage = error.localizedDescription
+                DispatchQueue.main.async {
+                    errorMessage = error.localizedDescription
+                }
                 return
             }
 
@@ -104,12 +151,12 @@ struct SignupAuthentication: View {
             
             let db = Firestore.firestore()
             let userData: [String: Any] = [
-                "userId": user.uid,  // ✅ Store userId explicitly
+                "userId": user.uid,
                 "fullName": fullName,
                 "username": username,
                 "mobileNumber": mobileNumber,
                 "gender": selectedGender,
-                "email": email,
+                "email": lowercasedEmail,
                 "genre":  "NA",
                 "language": "NA"
             ]
@@ -117,37 +164,38 @@ struct SignupAuthentication: View {
             // Save user data to Firestore
             db.collection("users").document(user.uid).setData(userData) { error in
                 if let error = error {
-                    errorMessage = "Failed to save user data: \(error.localizedDescription)"
+                    DispatchQueue.main.async {
+                        errorMessage = "Failed to save user data: \(error.localizedDescription)"
+                    }
                     return
                 }
 
-                // ✅ Generate and Send OTP
-                FirebaseManager.shared.generateAndSendOTP(email: email) { success, message in
-                    if success {
-                        print("✅ OTP Sent Successfully: \(message)")
-                        navigateTo2FA = true
-                        UserDefaults.standard.set(user.uid, forKey: "userId")
-                        
-                        sendWelcomeEmail(to: email) { success, message in
-                            if success {
-                                print("✅ \(message)")
-                            } else {
-                                print("❌ \(message)")
+                // Generate and Send OTP
+                FirebaseManager.shared.generateAndSendOTP(email: lowercasedEmail) { success, message in
+                    DispatchQueue.main.async {
+                        if success {
+                            print("✅ OTP Sent Successfully: \(message)")
+                            navigateTo2FA = true
+                            UserDefaults.standard.set(user.uid, forKey: "userId")
+                            
+                            sendWelcomeEmail(to: lowercasedEmail) { success, message in
+                                if success {
+                                    print("✅ \(message)")
+                                } else {
+                                    print("❌ \(message)")
+                                }
                             }
+                        } else {
+                            print("❌ Failed to Send OTP: \(message)")
+                            errorMessage = message
                         }
-                        
-                        // ✅ Navigate to OTP Verification Screen
-                       
-                        
-                    } else {
-                        print("❌ Failed to Send OTP: \(message)")
-                        errorMessage = message
                     }
                 }
             }
         }
     }
 
+    
 
 
     private func sendWelcomeEmail(to email: String, completion: @escaping (Bool, String) -> Void) {

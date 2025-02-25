@@ -140,12 +140,12 @@ struct FirebaseAuthView: View {
                     
                     FirebaseAuthManager.shared.verifyUserRole(email: lowercaseEmail, role: selectedRole) { isValid, message in
                         if isValid {
-                            FirebaseAuthManager.shared.fetchUserId(email: email,role:selectedRole) { userId in
+                            FirebaseAuthManager.shared.fetchUserId(email: lowercaseEmail,role:selectedRole) { userId in
                                 if let userId = userId {
                                     UserDefaults.standard.set(userId, forKey: "userId")
                                     print("User id in user default when signin \(userId)")
                                     
-                                    FirebaseManager.shared.generateAndSendOTP(email: email) { success, otpMessage in
+                                    FirebaseManager.shared.generateAndSendOTP(email: lowercaseEmail) { success, otpMessage in
                                         if success {
                                             UserDefaults.standard.set(role, forKey: "userRole")
                                             navigateTo2FA = true

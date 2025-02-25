@@ -1,6 +1,7 @@
 import SwiftUI
 import FirebaseFirestore
 
+
 struct EventModel: Identifiable {
     var id: String
     var title: String
@@ -12,7 +13,6 @@ struct EventModel: Identifiable {
     var isLive: Bool
     var attendeesCount: Int
 }
-
 struct LiveEventsView: View {
     @State private var liveEvents: [EventModel] = []
     @State private var selectedCategory: String = "All"
@@ -35,7 +35,7 @@ struct LiveEventsView: View {
                 switch selectedCategory {
                 case "Workshops": return $0.eventType == "Workshop"
                 case "Book Clubs": return $0.eventType == "Book Club"
-                case "Lect": return $0.eventType == "Lecture"
+                case "Lecture": return $0.eventType == "Lecture"
                 default: return true
                 }
             }
@@ -84,7 +84,7 @@ struct LiveEventsView: View {
                         .frame(maxWidth: .infinity, maxHeight:.infinity)
                 } else {
                     List(filteredEvents) { eventItem in
-                        EventRow(eventItem: eventItem, endEvent: endEvent)
+                        EventRow(eventItem: eventItem)
                     }
                     .listStyle(PlainListStyle())
                 }
@@ -106,8 +106,10 @@ struct LiveEventsView: View {
 
     // Fetch Events from Firebase Firestore
     private func fetchEvents() {
+        let now = Date()
+        
         db.collection("events")
-            .whereField("status", isEqualTo: "Live")
+            .whereField("endDateTime", isGreaterThan: now)
             .addSnapshotListener { snapshot, error in
                 guard let documents = snapshot?.documents else {
                     print("Error fetching events: \(error?.localizedDescription ?? "Unknown error")")
@@ -128,7 +130,7 @@ struct LiveEventsView: View {
                     let startTime = (data["startDateTime"] as? Timestamp)?.dateValue() ?? Date()
                     let endTime = (data["endDateTime"] as? Timestamp)?.dateValue() ?? Date()
                     let eventType = data["eventType"] as? String ?? "Other"
-                    let isLive = (data["status"] as? String ?? "") == "Live"
+                    let isLive = true // Since we're filtering by endDateTime
                     let attendeesCount = data["attendeesCount"] as? Int ?? 0
 
                     let eventItem = EventModel(
@@ -148,10 +150,14 @@ struct LiveEventsView: View {
                     spacesUsed += 1
                 }
                 
-                liveEvents = events
-                activeEventsCount = "\(events.count)"
-                totalAttendeesCount = "\(totalAttendees)"
-                spacesInUse = "\(spacesUsed)"
+                DispatchQueue.main.async {
+                    self.liveEvents = events
+                    self.activeEventsCount = "\(events.count)"
+                    self.totalAttendeesCount = "\(totalAttendees)"
+                    self.spacesInUse = "\(spacesUsed)"
+                    
+                    print("Filtered Events Count: \(events.count)")
+                }
             }
     }
 
@@ -209,64 +215,46 @@ struct CategoryButton: View {
 }
 
 // Event Row UI
+// Event Row UI
+import SwiftUI
+
 struct EventRow: View {
     let eventItem: EventModel
-    var endEvent: ((EventModel) -> Void)?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        NavigationLink(destination: EachEventView(event: eventItem)) {
             HStack {
-                Text(eventItem.title)
-                    .font(.headline)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(eventItem.title)
+                        .font(.headline)
+                    
+                    Text("\(formattedDate(eventItem.startTime)) - \(formattedDate(eventItem.endTime))")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
                 
                 Spacer()
                 
-                Text("● Live")
-                    .font(.caption)
-                    .foregroundColor(.green)
+                HStack {
+                    Text("● Live")
+                        .font(.caption)
+                        .foregroundColor(.green)
+                    
+                    
+                }
             }
+            .padding()
+            .background(Color(.systemBackground))
             
-            HStack {
-                Image(systemName: "calendar")
-                Text("\(formattedTime(eventItem.startTime)) - \(formattedTime(eventItem.endTime))")
-                Spacer()
-            }
-            .font(.caption)
-            .foregroundColor(.gray)
-
-            HStack {
-                Button(action: {}) {
-                    HStack {
-                        Image(systemName: "eye")
-                        Text("View Details")
-                    }
-                    .foregroundColor(.blue)
-                }
-                
-                Spacer()
-                
-                Button(action: { endEvent?(eventItem) }) {
-                    HStack {
-                        Image(systemName: "xmark.circle")
-                        Text("End Event")
-                    }
-                    .foregroundColor(.red)
-                }
-            }
         }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(10)
-        .shadow(radius: 1)
     }
 
-    private func formattedTime(_ date: Date) -> String {
+    private func formattedDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM d, h:mm a"
         return formatter.string(from: date)
     }
 }
-
 struct LiveEventsView_Previews: PreviewProvider {
     static var previews: some View {
         LiveEventsView()

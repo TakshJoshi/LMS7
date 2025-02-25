@@ -150,6 +150,7 @@ struct AdminDashboardView: View {
                         }
                         .sheet(isPresented: $showNotification) {
                             NavigationStack {
+                                NotificationsView()
                                 // Notification View
                             }
                         }

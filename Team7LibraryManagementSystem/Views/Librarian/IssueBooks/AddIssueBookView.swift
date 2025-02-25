@@ -170,12 +170,3 @@ struct AddIssueBookView: View {
 }
 
 
-struct UserProfile {
-    let userId: String
-    let firstName: String
-    let lastName: String
-    let email: String
-    let dob: String
-    let role: String
-    let isDeleted: Bool
-}

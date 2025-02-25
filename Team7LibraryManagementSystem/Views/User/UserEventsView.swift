@@ -35,10 +35,19 @@ struct UserEventsView: View {
     
     var body: some View {
         NavigationStack {
-            VStack (spacing: 0){
+            VStack(spacing: 0) {
                 // Stats Header
-                
-                
+                HStack(alignment: .center, spacing: 15) {
+                    StatCard(icon: "", title: activeEventsCount, subtitle: "Active Events", color: .blue)
+                    StatCard(icon: "", title: totalAttendeesCount, subtitle: "Attendees", color: .green)
+                    StatCard(icon: "", title: spacesInUse, subtitle: "Spaces in Use", color: .red)
+                }
+                .padding()
+                .padding(.bottom, 15)
+                .padding(.top, 25)
+                .frame(maxWidth: .infinity)
+                .frame(height: 150)
+                .background(Color(.systemBackground))
                 
                 // Category Filter
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -52,7 +61,7 @@ struct UserEventsView: View {
                 
                 // Live Events List
                 if filteredEvents.isEmpty {
-                                    // Empty State
+                    // Empty State
                     VStack {
                         Image(systemName: "calendar.badge.exclamationmark")
                             .resizable()
@@ -61,17 +70,21 @@ struct UserEventsView: View {
                             .foregroundColor(.gray)
                         Text("No live events")
                             .foregroundColor(.gray)
-                        }
-                        .frame(maxWidth: .infinity, maxHeight:.infinity)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight:.infinity)
                 } else {
                     List(filteredEvents) { eventItem in
-                        EventRow(eventItem: eventItem, endEvent: endEvent)
+                        EventRow(eventItem: eventItem)
                     }
                     .listStyle(PlainListStyle())
                 }
             }
             .navigationTitle("Events")
-            
+            .navigationBarItems(trailing:
+                Button(action: { showingEventCreationView = true }) {
+                    Image(systemName: "plus")
+                }
+            )
             .onAppear(perform: fetchEvents)
             .sheet(isPresented: $showingEventCreationView) {
                 EventCreationView()
@@ -79,8 +92,36 @@ struct UserEventsView: View {
         }
     }
 
+    // Existing fetchEvents method remains the same
+
+    // StatCard for the header
+    struct StatCard: View {
+        let icon: String
+        let title: String
+        let subtitle: String
+        let color: Color
+        
+        var body: some View {
+            VStack {
+                Text(title)
+                    .font(.headline)
+                    .foregroundColor(color)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundColor(.gray)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(8)
+            .background(Color(.systemGray6))
+            .cornerRadius(10)
+        }
+    }
+
+
     // Fetch Events from Firebase Firestore
     private func fetchEvents() {
+        let now = Date()
+        
         db.collection("events")
             .whereField("status", isEqualTo: "Live")
             .addSnapshotListener { snapshot, error in
@@ -106,31 +147,36 @@ struct UserEventsView: View {
                     let isLive = (data["status"] as? String ?? "") == "Live"
                     let attendeesCount = data["attendeesCount"] as? Int ?? 0
 
-                    let eventItem = EventModel(
-                        id: id,
-                        title: title,
-                        description: description,
-                        coverImage: coverImage,
-                        startTime: startTime,
-                        endTime: endTime,
-                        eventType: eventType,
-                        isLive: isLive,
-                        attendeesCount: attendeesCount
-                    )
-                    
-                    events.append(eventItem)
-                    totalAttendees += attendeesCount
-                    spacesUsed += 1
+                    // Check if the event is in the future or currently ongoing
+                    if endTime > now {
+                        let eventItem = EventModel(
+                            id: id,
+                            title: title,
+                            description: description,
+                            coverImage: coverImage,
+                            startTime: startTime,
+                            endTime: endTime,
+                            eventType: eventType,
+                            isLive: isLive,
+                            attendeesCount: attendeesCount
+                        )
+                        
+                        events.append(eventItem)
+                        totalAttendees += attendeesCount
+                        spacesUsed += 1
+                    }
                 }
                 
-                liveEvents = events
-                activeEventsCount = "\(events.count)"
-                totalAttendeesCount = "\(totalAttendees)"
-                spacesInUse = "\(spacesUsed)"
+                DispatchQueue.main.async {
+                    self.liveEvents = events
+                    self.activeEventsCount = "\(events.count)"
+                    self.totalAttendeesCount = "\(totalAttendees)"
+                    self.spacesInUse = "\(spacesUsed)"
+                    
+                    print("Filtered Events Count: \(events.count)")
+                }
             }
     }
-
-    // End Event Action
     private func endEvent(selectedEvent: EventModel) {
         db.collection("events").document(selectedEvent.id).updateData(["status": "Ended"]) { error in
             if let error = error {
