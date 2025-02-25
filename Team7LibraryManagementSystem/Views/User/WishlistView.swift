@@ -6,7 +6,7 @@ struct WishlistView: View {
     private let db = Firestore.firestore()
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack {
                     if books.isEmpty {

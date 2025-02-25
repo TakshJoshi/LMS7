@@ -8,11 +8,19 @@
 import SwiftUI
 import FirebaseFirestore
 
+struct PreBookItem: Identifiable {
+    let id: String
+    let userEmail: String
+    let isbn13: String
+    let status: String
+}
+
 struct libHomeView: View {
     @State private var books: [Book] = []
     @State private var activeUsers = 0
     @State private var showProfile = false
-        @State private var showNotification = false
+    @State private var showNotification = false
+    @State private var preBookItems: [PreBookItem] = []
     @State private var recentActivities: [LibraryActivity] = [
         
         LibraryActivity(
@@ -70,7 +78,7 @@ struct libHomeView: View {
                                             showNotification = true
                                         }.sheet(isPresented: $showNotification) {
                                             NavigationStack {
-                                                //                                    Events()
+                                                NotificationsView()
                                             }
                                         }
                                     
@@ -139,76 +147,113 @@ struct libHomeView: View {
                     
                     // Recent Activities
                     VStack(alignment: .leading, spacing: 16) {
-                        Text("Recent Activities")
+                        Text("Pre-Book Requests")
                             .font(.title2)
                             .fontWeight(.bold)
                             .padding(.horizontal)
-                        
-                        VStack(spacing: 12) {
-                            ForEach(recentActivities) { activity in
-                                ActivityRow(activity: activity)
-                            }
+                                            
+                    VStack(spacing: 12) {
+                        ForEach(preBookItems) { preBook in
+                            PreBookRequestRow(preBook: preBook)
                         }
-                        .padding(.horizontal)
                     }
+                    .padding(.horizontal)
+                }
                 }
                 .padding(.vertical)
             }
             .onAppear {
                 fetchLibraryData()
+                fetchPreBookRequests()
             }
         }
     }
-    
-    private func fetchLibraryData() {
-        let db = Firestore.firestore()
-        
-        // Fetch books count
-        db.collection("books").getDocuments { snapshot, error in
-            if let error = error {
-                print("Error fetching books: \(error.localizedDescription)")
-                return
-            }
-            guard let documents = snapshot?.documents else { return }
-            self.books = documents.compactMap { document -> Book? in
-                let data = document.data()
-                            
-                return Book(
-                    id: document.documentID,
-                    title: data["title"] as? String ?? "",
-                    authors: data["authors"] as? [String] ?? [],
-                    publisher: data["publisher"] as? String,
-                    publishedDate: data["publishedDate"] as? String,
-                    description: data["description"] as? String,
-                    pageCount: data["pageCount"] as? Int,
-                    categories: data["categories"] as? [String],
-                    coverImageUrl: data["coverImageUrl"] as? String,
-                    isbn13: data["isbn13"] as? String,
-                    language: data["language"] as? String,
-                    quantity: data["quantity"] as? Int ?? 0,
-                    availableQuantity: data["availableQuantity"] as? Int ?? 0,
-                    location: data["location"] as? String ?? "",
-                    status: data["status"] as? String ?? "available",
-                    totalCheckouts: data["totalCheckouts"] as? Int ?? 0,
-                    currentlyBorrowed: data["currentlyBorrowed"] as? Int ?? 0,
-                    isAvailable: data["isAvailable"] as? Bool ?? true,
-                    libraryId: data["libraryId"] as? String 
-                )
+    private func fetchPreBookRequests() {
+            let db = Firestore.firestore()
+            
+            db.collection("PreBook").whereField("status", isEqualTo: "Pending").getDocuments { snapshot, error in
+                if let error = error {
+                    print("Error fetching pre-book requests: \(error.localizedDescription)")
+                    return
+                }
+                
+                guard let documents = snapshot?.documents else { return }
+                
+                self.preBookItems = documents.map { document in
+                    PreBookItem(
+                        id: document.documentID,
+                        userEmail: document.data()["userEmail"] as? String ?? "",
+                        isbn13: document.data()["isbn13"] as? String ?? "",
+                        status: document.data()["status"] as? String ?? ""
+                    )
+                }
             }
         }
-        
-        // Fetch active users count
-        db.collection("users").whereField("isActive", isEqualTo: true).getDocuments { snapshot, error in
-            if let error = error {
-                print("Error fetching users: \(error.localizedDescription)")
-                return
+    private func fetchLibraryData() {
+            let db = Firestore.firestore()
+            
+            // Fetch books count
+            db.collection("books").getDocuments { snapshot, error in
+                if let error = error {
+                    print("Error fetching books: \(error.localizedDescription)")
+                    return
+                }
+                guard let documents = snapshot?.documents else { return }
+                self.books = documents.compactMap { document -> Book? in
+                    let data = document.data()
+                                
+                    return Book(
+                        id: document.documentID,
+                        title: data["title"] as? String ?? "",
+                        authors: data["authors"] as? [String] ?? [],
+                        publisher: data["publisher"] as? String,
+                        publishedDate: data["publishedDate"] as? String,
+                        description: data["description"] as? String,
+                        pageCount: data["pageCount"] as? Int,
+                        categories: data["categories"] as? [String],
+                        coverImageUrl: data["coverImageUrl"] as? String,
+                        isbn13: data["isbn13"] as? String,
+                        language: data["language"] as? String,
+                        quantity: data["quantity"] as? Int ?? 0,
+                        availableQuantity: data["availableQuantity"] as? Int ?? 0,
+                        location: data["location"] as? String ?? "",
+                        status: data["status"] as? String ?? "available",
+                        totalCheckouts: data["totalCheckouts"] as? Int ?? 0,
+                        currentlyBorrowed: data["currentlyBorrowed"] as? Int ?? 0,
+                        isAvailable: data["isAvailable"] as? Bool ?? true,
+                        libraryId: data["libraryId"] as? String
+                    )
+                }
             }
             
-            if let documents = snapshot?.documents {
-                self.activeUsers = documents.count
+            // Fetch active users count
+            db.collection("users").whereField("isActive", isEqualTo: true).getDocuments { snapshot, error in
+                if let error = error {
+                    print("Error fetching users: \(error.localizedDescription)")
+                    return
+                }
+                
+                if let documents = snapshot?.documents {
+                    self.activeUsers = documents.count
+                }
             }
         }
-    }
+    func confirmPreBooking(preBookId: String) {
+            let db = Firestore.firestore()
+            let preBookRef = db.collection("PreBook").document(preBookId)
+            
+            preBookRef.updateData([
+                "status": "Confirmed"
+            ]) { error in
+                if let error = error {
+                    print("Error confirming pre-booking: \(error.localizedDescription)")
+                } else {
+                    print("Pre-booking confirmed successfully!")
+                    // Refresh pre-book requests after confirmation
+                    fetchPreBookRequests()
+                }
+            }
+        }
 }
 
 struct StatCard2: View {
@@ -239,7 +284,54 @@ struct StatCard2: View {
         .cornerRadius(12)
     }
 }
-
+struct PreBookRequestRow: View {
+    let preBook: PreBookItem
+    @State private var isConfirmed = false
+    
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(preBook.userEmail)
+                    .font(.headline)
+                
+                Text("ISBN: \(preBook.isbn13)")
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+            }
+            
+            Spacer()
+            
+            Button(action: {
+                // Confirm pre-booking
+                confirmPreBooking(preBookId: preBook.id)
+                isConfirmed = true
+            }) {
+                Image(systemName: isConfirmed ? "checkmark.circle.fill" : "checkmark.circle")
+                    .foregroundColor(isConfirmed ? .green : .blue)
+                    .imageScale(.large)
+            }
+            .disabled(isConfirmed)
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+    }
+    
+    private func confirmPreBooking(preBookId: String) {
+        let db = Firestore.firestore()
+        let preBookRef = db.collection("PreBook").document(preBookId)
+        
+        preBookRef.updateData([
+            "status": "Confirmed"
+        ]) { error in
+            if let error = error {
+                print("Error confirming pre-booking: \(error.localizedDescription)")
+            } else {
+                print("Pre-booking confirmed successfully!")
+            }
+        }
+    }
+}
 struct homeLibraryCard: View {
     let name: String
     let location: String

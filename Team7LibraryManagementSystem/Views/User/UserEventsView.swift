@@ -34,7 +34,7 @@ struct UserEventsView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack (spacing: 0){
                 // Stats Header
                 

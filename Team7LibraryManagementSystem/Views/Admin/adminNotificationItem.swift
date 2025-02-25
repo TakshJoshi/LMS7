@@ -1,10 +1,10 @@
-
 import SwiftUI
 import Firebase
 import FirebaseFirestore
+import FirebaseAuth
 
 // MARK: - Notification Model
-struct NotificationItem2: Identifiable {
+struct NotificationItem: Identifiable {
     let id: String
     let senderName: String
     let message: String
@@ -14,15 +14,14 @@ struct NotificationItem2: Identifiable {
 }
 
 // MARK: - Notifications View
-struct NotificationsView2: View {
-    @State private var notifications: [NotificationItem2] = []
+struct NotificationsView: View {
+    @State private var notifications: [NotificationItem] = []
     @State private var searchText: String = ""
     @State private var isLoading: Bool = true
-    @State private var showNotificationManager = false
+    @State private var userID: String? // ✅ Auto-updated with logged-in user ID
+    @State private var showCreateNotification = false
 
-    let userID = "4A27DDF5-97F5-4539-98AC-39B5801A7137" // ✅ Fixed User ID
-
-    var filteredNotifications: [NotificationItem2] {
+    var filteredNotifications: [NotificationItem] {
         if searchText.isEmpty {
             return notifications
         } else {
@@ -31,7 +30,7 @@ struct NotificationsView2: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack {
                 // Search Bar
                 TextField("Search notifications", text: $searchText)
@@ -45,33 +44,46 @@ struct NotificationsView2: View {
                         .padding()
                 } else {
                     List(filteredNotifications) { notification in
-                        NotificationRow2(notification: notification)
+                        NotificationRow(notification: notification)
                     }
                     .listStyle(PlainListStyle())
                 }
             }
             .navigationTitle("Notifications")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        showNotificationManager = true
-                    }) {
+            .navigationBarItems(trailing:
+                Button(action: {
+                    showCreateNotification = true
+                }) {
                     Image(systemName: "plus")
-                    }
                 }
-            }
-            .sheet(isPresented: $showNotificationManager) {
-            NotificationManagerView()
+            )
+//            .sheet(isPresented: $showCreateNotification) {
+//                NotificationView()
+//            }
+            .onAppear {
+                fetchUserID() // ✅ Fetch user ID dynamically
             }
         }
     }
 
+    // MARK: - Fetch Current User ID
+    func fetchUserID() {
+        if let currentUser = Auth.auth().currentUser {
+            self.userID = currentUser.uid
+            fetchNotifications(for: currentUser.uid)
+        } else {
+            print("⚠️ User not logged in!")
+        }
+    }
+
     // MARK: - Fetch Notifications from Firestore
-    func fetchNotifications() {
+    func fetchNotifications(for userID: String) {
         let db = Firestore.firestore()
 
+        print("📌 Fetching notifications for userID: \(userID)")
+
         db.collection("notifications")
-            .whereField("recipients", arrayContains: userID) // ✅ Fetch notifications only for this user
+            .whereField("recipients", arrayContains: userID) // ✅ Fetch only for logged-in user
             .order(by: "timestamp", descending: true)
             .addSnapshotListener { snapshot, error in
                 if let error = error {
@@ -83,24 +95,25 @@ struct NotificationsView2: View {
                 if let documents = snapshot?.documents {
                     notifications = documents.compactMap { doc in
                         let data = doc.data()
-                        return NotificationItem2(
+                        return NotificationItem(
                             id: doc.documentID,
-                            senderName: data["senderName"] as? String ?? "Unknown",
+                            senderName: data["recipient"] as? String ?? "Unknown",
                             message: data["message"] as? String ?? "",
-                            category: data["category"] as? String ?? "General",
+                            category: data["subject"] as? String ?? "General",
                             timestamp: (data["timestamp"] as? Timestamp)?.dateValue() ?? Date(),
                             isRead: data["isRead"] as? Bool ?? false
                         )
                     }
                     isLoading = false
+                    print("✅ Fetched \(notifications.count) notifications")
                 }
             }
     }
 }
 
 // MARK: - Notification Row
-struct NotificationRow2: View {
-    let notification: NotificationItem2
+struct NotificationRow: View {
+    let notification: NotificationItem
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -146,9 +159,9 @@ struct NotificationRow2: View {
     }
 }
 
-//// MARK: - Preview
-//struct NotificationsView_Previews: PreviewProvider {
-//    static var previews: some View {
-//        NotificationsView2()
-//    }
-//}
+// MARK: - Preview
+struct NotificationsView_Previews: PreviewProvider {
+    static var previews: some View {
+        NotificationsView()
+    }
+}

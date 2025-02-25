@@ -139,7 +139,7 @@ struct AddBookView: View {
         
         let query = searchQuery.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         // Replace YOUR_API_KEY with your actual Google Books API key
-        let apiKey = "AIzaSyDwgO5fIGJSI_0D9dw-KW82ylbn40AL9Eo"
+        let apiKey = "AIzaSyBFi8ZtHZdI_avEm11ZJAMRkGNF1vBl8zY"
         let urlString = "https://www.googleapis.com/books/v1/volumes?q=\(query)&key=\(apiKey)"
         
         guard let url = URL(string: urlString) else {
