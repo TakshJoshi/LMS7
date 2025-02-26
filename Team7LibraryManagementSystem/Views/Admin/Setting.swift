@@ -1,4 +1,6 @@
 import SwiftUI
+import FirebaseAuth
+import FirebaseFirestore
 
 struct Setting: View {
     @Environment(\.dismiss) var dismiss
@@ -6,6 +8,13 @@ struct Setting: View {
     @State private var isBookRequestAlertsOn = true
     @State private var isSystemNotificationsOn = true
     @State private var isDarkMode = false
+    
+    // User information states
+    @State private var userName = "Loading..."
+    @State private var userEmail = "Loading..."
+    @State private var userRole = "User"
+    @State private var isLoading = true
+    @State private var showSignOutAlert = false
 
     var body: some View {
         NavigationStack {
@@ -17,7 +26,7 @@ struct Setting: View {
                     VStack(spacing: 20) {
                         // Profile Card
                         VStack {
-                            NavigationLink(destination: AdminProfile()) {
+                            NavigationLink(destination: ProfileView()) {
                                 HStack(spacing: 15) {
                                     Image(systemName: "person.crop.circle.fill")
                                         .resizable()
@@ -26,15 +35,15 @@ struct Setting: View {
                                         .foregroundColor(.blue)
                                     
                                     VStack(alignment: .leading, spacing: 4) {
-                                        Text("John Anderson")
+                                        Text(userName)
                                             .font(.title3)
                                             .fontWeight(.bold)
                                         
-                                        Text("Library Administrator")
+                                        Text(userRole)
                                             .font(.subheadline)
                                             .foregroundColor(.secondary)
                                         
-                                        Text("j.anderson@library.org")
+                                        Text(userEmail)
                                             .font(.subheadline)
                                             .foregroundColor(.secondary)
                                     }
@@ -52,6 +61,7 @@ struct Setting: View {
                             .buttonStyle(PlainButtonStyle())
                         }
                         .padding(.horizontal)
+                        .redacted(reason: isLoading ? .placeholder : [])
                         
                         // Library Policies Section
                         SettingsSection(title: "Library Policies") {
@@ -130,6 +140,21 @@ struct Setting: View {
                             .buttonStyle(PlainButtonStyle())
                         }
                         
+                        // Sign Out Button
+                        Button(action: { showSignOutAlert = true }) {
+                            HStack {
+                                Spacer()
+                                Text("Sign Out")
+                                    .foregroundColor(.red)
+                                    .fontWeight(.bold)
+                                Spacer()
+                            }
+                            .padding()
+                            .background(Color(.systemBackground))
+                            .cornerRadius(10)
+                        }
+                        .padding(.horizontal)
+                        
                         // App Info
                         VStack(spacing: 5) {
                             Text("Library Management System")
@@ -150,15 +175,127 @@ struct Setting: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") {
-                        // Save settings action
                         dismiss()
                     }
                     .fontWeight(.bold)
                 }
             }
+            .alert(isPresented: $showSignOutAlert) {
+                Alert(
+                    title: Text("Sign Out"),
+                    message: Text("Are you sure you want to sign out?"),
+                    primaryButton: .destructive(Text("Sign Out")) {
+                        signOut()
+                    },
+                    secondaryButton: .cancel()
+                )
+            }
+            .onAppear {
+                fetchUserProfile()
+            }
+        }
+    }
+    
+    private func fetchUserProfile() {
+        guard let currentUser = Auth.auth().currentUser else {
+            print("🚨 ERROR: No user is currently signed in")
+            userName = "No User"
+            userEmail = "No Email"
+            userRole = "No Role"
+            isLoading = false
+            return
+        }
+        
+        let db = Firestore.firestore()
+        
+        // Function to check admin collection first
+        func checkAdminsCollection() {
+            db.collection("admins")
+                .whereField("userId", isEqualTo: currentUser.uid)
+                .getDocuments { (snapshot, error) in
+                    if let error = error {
+                        print("🚨 Admins Collection Error: \(error.localizedDescription)")
+                        checkLibrariansCollection()
+                        return
+                    }
+                    
+                    guard let documents = snapshot?.documents, !documents.isEmpty else {
+                        checkLibrariansCollection()
+                        return
+                    }
+                    
+                    let document = documents[0]
+                    let data = document.data()
+                    print("📦 Fetched Admin Data: \(data)")
+                    
+                    userName = data["fullName"] as? String ?? "Unknown User"
+                    userEmail = data["email"] as? String ?? currentUser.email ?? "No Email"
+                    userRole = data["role"] as? String ?? "Admin"
+                    
+                    isLoading = false
+                    
+                    print("👤 Parsed Admin Info:")
+                    print("Name: \(userName)")
+                    print("Email: \(userEmail)")
+                    print("Role: \(userRole)")
+                }
+        }
+        
+        // Function to check librarians collection
+        func checkLibrariansCollection() {
+            db.collection("librarians")
+                .whereField("userId", isEqualTo: currentUser.uid)
+                .getDocuments { (snapshot, error) in
+                    isLoading = false
+                    
+                    if let error = error {
+                        print("🚨 Librarians Collection Error: \(error.localizedDescription)")
+                        userName = "Unknown User"
+                        userEmail = currentUser.email ?? "No Email"
+                        userRole = "User"
+                        return
+                    }
+                    
+                    guard let documents = snapshot?.documents, !documents.isEmpty else {
+                        print("🚨 No document found in librarians collection")
+                        userName = currentUser.displayName ?? "Unknown User"
+                        userEmail = currentUser.email ?? "No Email"
+                        userRole = "User"
+                        return
+                    }
+                    
+                    let document = documents[0]
+                    let data = document.data()
+                    print("📦 Fetched Librarian Data: \(data)")
+                    
+                    userName = data["fullName"] as? String ?? "Unknown User"
+                    userEmail = data["email"] as? String ?? currentUser.email ?? "No Email"
+                    userRole = data["role"] as? String ?? "Librarian"
+                    
+                    print("👤 Parsed Librarian Info:")
+                    print("Name: \(userName)")
+                    print("Email: \(userEmail)")
+                    print("Role: \(userRole)")
+                }
+        }
+        
+        // Start by checking admins collection
+        checkAdminsCollection()
+    }
+    private func signOut() {
+        do {
+            try Auth.auth().signOut()
+            // Navigate to login screen
+            // Use a root view reset approach
+            UIApplication.shared.windows.first?.rootViewController = UIHostingController(rootView: LibraryLoginView())
+            UIApplication.shared.windows.first?.makeKeyAndVisible()
+            print("User signed out")
+        } catch {
+            print("Error signing out: \(error.localizedDescription)")
         }
     }
 }
+
 
 // MARK: - Support Components
 struct SettingsSection<Content: View>: View {

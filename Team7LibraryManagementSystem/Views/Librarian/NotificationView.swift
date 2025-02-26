@@ -23,7 +23,7 @@ struct NotificationView: View {
     @State private var isShowingRecipientSheet = false  // Controls recipient selection popup
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(alignment: .leading, spacing: 12) {
                 
                 // MARK: - Recipients Section
@@ -67,12 +67,15 @@ struct NotificationView: View {
 
                 Spacer()
             }
-            .padding()
+//            .padding()
+            .padding(.horizontal,20)
+            .padding(.top,20)
             .navigationTitle("New Notification")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { }
-                }
+//                ToolbarItem(placement: .navigationBarLeading) {
+//                    Button("Cancel") { }
+//                }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Send") {

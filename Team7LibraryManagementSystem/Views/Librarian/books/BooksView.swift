@@ -59,13 +59,14 @@ struct BooksView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
                     // Search and Filter Section
                     HStack {
                         TextField("Search books", text: $searchText)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .padding(10)
                             .padding(.horizontal)
                         
                         // Sort Button
@@ -398,4 +399,8 @@ struct NoResultsView: View {
                 .padding()
         }
     }
+}
+
+#Preview{
+    BooksView()
 }

@@ -2,17 +2,17 @@ import SwiftUI
 import FirebaseFirestore
 
 
-struct EventModel: Identifiable {
-    var id: String
-    var title: String
-    var description: String
-    var coverImage: String
-    var startTime: Date
-    var endTime: Date
-    var eventType: String
-    var isLive: Bool
-    var attendeesCount: Int
-}
+//struct EventModel: Identifiable {
+//    var id: String
+//    var title: String
+//    var description: String
+//    var coverImage: String
+//    var startTime: Date
+//    var endTime: Date
+//    var eventType: String
+//    var isLive: Bool
+//    var attendeesCount: Int
+//}
 struct LiveEventsView: View {
     @State private var liveEvents: [EventModel] = []
     @State private var selectedCategory: String = "All"
@@ -22,6 +22,8 @@ struct LiveEventsView: View {
     @State private var activeEventsCount: String = ""
     @State private var totalAttendeesCount: String = ""
     @State private var spacesInUse: String = ""
+    
+    @State private var eventStatus: String = ""
     
     private let db = Firestore.firestore()
     
@@ -132,7 +134,12 @@ struct LiveEventsView: View {
                     let eventType = data["eventType"] as? String ?? "Other"
                     let isLive = true // Since we're filtering by endDateTime
                     let attendeesCount = data["attendeesCount"] as? Int ?? 0
-
+                    if(isLive){
+                        eventStatus = "Live"
+                    } else {
+                        eventStatus = "Ended"
+                    }
+                    
                     let eventItem = EventModel(
                         id: id,
                         title: title,
@@ -141,8 +148,13 @@ struct LiveEventsView: View {
                         startTime: startTime,
                         endTime: endTime,
                         eventType: eventType,
-                        isLive: isLive,
-                        attendeesCount: attendeesCount
+                       // coverImage: coverImage,
+                        location: " ",
+                        notifyMembers: false,
+                       
+                        status: eventStatus
+                      //  isLive: isLive,
+                       // attendeesCount: attendeesCount
                     )
                     
                     events.append(eventItem)

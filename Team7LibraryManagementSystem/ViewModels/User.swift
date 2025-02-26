@@ -6,12 +6,17 @@
 //
 
 import Foundation
-struct UserProfile {
+struct UserProfile: Codable {
     let userId: String
-    let firstName: String
-    let lastName: String
-    let email: String
-    let dob: String
+    var firstName: String
+    var lastName: String
+    var email: String
+   // var dob: String
+    var gender: String
     let role: String
-    let isDeleted: Bool
+    var isDeleted: Bool
+    var language: [String]
+    var genre: [String]
+    var mobileNumber: String
+    var profileImageUrl: String?
 }

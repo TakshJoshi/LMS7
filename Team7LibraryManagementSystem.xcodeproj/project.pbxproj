@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		4525CE402D6C821E001A2C2C /* FirebaseFirestoreCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = 4525CE3F2D6C821E001A2C2C /* FirebaseFirestoreCombine-Community */; };
+		4525CF442D6EF5A1001A2C2C /* CodeScanner in Frameworks */ = {isa = PBXBuildFile; productRef = 4525CF432D6EF5A1001A2C2C /* CodeScanner */; };
 		4534B7062D647D7B0003102E /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = 4534B7052D647D6C0003102E /* .gitignore */; };
 		458024352D64A87500D5CD6D /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 458024342D64A87500D5CD6D /* FirebaseStorage */; };
 		94F436882D624A1700A6C17E /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 94F436872D624A1700A6C17E /* FirebaseAnalytics */; };
@@ -64,6 +65,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4525CF442D6EF5A1001A2C2C /* CodeScanner in Frameworks */,
 				94F436882D624A1700A6C17E /* FirebaseAnalytics in Frameworks */,
 				94F4368E2D624A1700A6C17E /* FirebaseFirestore in Frameworks */,
 				94F436912D624A8100A6C17E /* SwiftSMTP in Frameworks */,
@@ -147,6 +149,7 @@
 				94F436902D624A8100A6C17E /* SwiftSMTP */,
 				458024342D64A87500D5CD6D /* FirebaseStorage */,
 				4525CE3F2D6C821E001A2C2C /* FirebaseFirestoreCombine-Community */,
+				4525CF432D6EF5A1001A2C2C /* CodeScanner */,
 			);
 			productName = Team7LibraryManagementSystem;
 			productReference = 94F436572D62492900A6C17E /* Team7LibraryManagementSystem.app */;
@@ -233,6 +236,7 @@
 			packageReferences = (
 				94F436862D624A1700A6C17E /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				94F4368F2D624A8100A6C17E /* XCRemoteSwiftPackageReference "Swift-SMTP" */,
+				4525CF422D6EF5A1001A2C2C /* XCRemoteSwiftPackageReference "CodeScanner" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 94F436582D62492900A6C17E /* Products */;
@@ -439,6 +443,7 @@
 				DEVELOPMENT_TEAM = 2S7X3Q9883;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "We need access to your camera to scan barcodes.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -469,6 +474,7 @@
 				DEVELOPMENT_TEAM = 2S7X3Q9883;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "We need access to your camera to scan barcodes.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -602,6 +608,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		4525CF422D6EF5A1001A2C2C /* XCRemoteSwiftPackageReference "CodeScanner" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/twostraws/CodeScanner";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.2;
+			};
+		};
 		94F436862D624A1700A6C17E /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
@@ -625,6 +639,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 94F436862D624A1700A6C17E /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = "FirebaseFirestoreCombine-Community";
+		};
+		4525CF432D6EF5A1001A2C2C /* CodeScanner */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4525CF422D6EF5A1001A2C2C /* XCRemoteSwiftPackageReference "CodeScanner" */;
+			productName = CodeScanner;
 		};
 		458024342D64A87500D5CD6D /* FirebaseStorage */ = {
 			isa = XCSwiftPackageProductDependency;

@@ -7,6 +7,7 @@
 
 import SwiftUI
 import FirebaseFirestore
+import CodeScanner
 
 struct AddBookView: View {
     @Environment(\.dismiss) var dismiss
@@ -22,14 +23,23 @@ struct AddBookView: View {
     @State private var selectedLibrary: String = ""
     @State private var libraries: [Library] = []
     @State private var librarian: Librarian?
-    
+    @State private var isShowingScanner = false // For barcode scanner
+    @State private var coverImage: UIImage? = nil
     var body: some View {
         NavigationStack {
             VStack {
-                // Search Bar
+                // Search Bar with Barcode Scanner
                 HStack {
                     TextField("Search by title, author, or ISBN", text: $searchQuery)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
+                    
+                    Button(action: {
+                        isShowingScanner = true // Open scanner
+                    }) {
+                        Image(systemName: "barcode.viewfinder")
+                            .font(.title)
+                            .foregroundColor(.blue)
+                    }
                     
                     Button(action: searchBooks) {
                         Image(systemName: "magnifyingglass")
@@ -46,19 +56,17 @@ struct AddBookView: View {
                         .padding()
                 } else if let selectedBook = selectedBook {
                     // Selected Book Details View
-                    // In AddBookView where you create BookDetailsView
                     BookDetailsView(
                         book: selectedBook,
                         quantity: $quantity,
                         location: $location,
-                        selectedLibrary: $selectedLibrary, // Pass the binding
-                        libraries: libraries, // Pass the libraries array
+                        selectedLibrary: $selectedLibrary,
+                        libraries: libraries,
                         onSave: addBookToLibrary,
                         onCancel: { self.selectedBook = nil }
-                    
                     )
                 } else {
-                    // Search Results
+                    // Display search results
                     SearchResultsView(
                         searchResults: searchResults,
                         onBookSelect: { book in
@@ -74,14 +82,26 @@ struct AddBookView: View {
             } message: {
                 Text(errorMessage ?? "Unknown error")
             }
-            .sheet(isPresented: $showingAddBook) {
-                AddBookView()
+            .sheet(isPresented: $isShowingScanner) {
+                CodeScannerView(codeTypes: [.ean13, .ean8], simulatedData: "9781234567890") { result in
+                    switch result {
+                    case .success(let code):
+                        searchQuery = code.string // Update search field with scanned ISBN
+                        isShowingScanner = false
+                    case .failure(let error):
+                        errorMessage = "Scan failed: \(error.localizedDescription)"
+                        showAlert = true
+                        isShowingScanner = false
+                    }
+                }
             }
-        }.onAppear {
+        }
+        .onAppear {
             fetchLibraries()
             fetchLibrarianData()
         }
     }
+    
     private func fetchLibraries() {
         let db = Firestore.firestore()
         db.collection("libraries").getDocuments { snapshot, error in
@@ -200,7 +220,7 @@ struct AddBookView: View {
                             isAvailable: true,
                             libraryId: nil  // Add this line with nil as placeholder
                         )
-                    
+                        
                     }
                     self.isSearching = false
                 } catch {
@@ -230,7 +250,13 @@ struct AddBookView: View {
             showAlert = true
             return
         }
-        
+        var coverImageBase64: String? = nil
+        if let imageUrl = book.coverImageUrl, let url = URL(string: imageUrl),
+           let imageData = try? Data(contentsOf: url), let image = UIImage(data: imageData) {
+            coverImageBase64 = convertImageToBase64(image)
+            
+        }
+//        print("image : \(image)" )
         let db = Firestore.firestore()
         let bookData: [String: Any] = [
             "bookId": book.id,
@@ -242,6 +268,7 @@ struct AddBookView: View {
             "pageCount": book.pageCount ?? 0,
             "categories": book.categories ?? [],
             "coverImageUrl": book.coverImageUrl ?? "",
+            "coverImageBase64": coverImageBase64 ?? "",
             "isbn13": book.isbn13 ?? "",
             "language": book.language ?? "",
             
@@ -334,7 +361,13 @@ struct AddBookView: View {
                     }
                 }
             }
+        
     }
+    private func convertImageToBase64(_ image: UIImage) -> String? {
+        guard let imageData = image.jpegData(compressionQuality: 0.1) else { return nil }
+        return imageData.base64EncodedString()
+    }
+}
     
     struct SearchResultsView: View {
         let searchResults: [Book]
@@ -476,4 +509,4 @@ struct AddBookView: View {
     }
     
     // Utility Image View
-}
+

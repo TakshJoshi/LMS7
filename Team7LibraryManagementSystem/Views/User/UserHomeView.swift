@@ -89,34 +89,34 @@ struct HomeScreen: View {
                         )
                     }
                 }
-                                .padding(.top)
-                                .onAppear {
-                                    booksViewModel.fetchBooks()
-                                }
-                                .navigationTitle("HOME")
-                                .toolbar {
-                                    HStack(spacing: 8) {
-                                        Image(systemName: "bell")
-                                            .font(.title3)
-                                            .foregroundStyle(.black)
-                                            .onTapGesture {
-                                                showUserNotification = true
-                                            }.sheet(isPresented: $showUserNotification) {
-                                                NavigationStack {
+                .padding(.top)
+                .onAppear {
+                    booksViewModel.fetchBooks()
+                }
+                .navigationTitle("HOME")
+                .toolbar {
+                    HStack(spacing: 8) {
+                        Image(systemName: "bell")
+                            .font(.title3)
+                            .foregroundStyle(.black)
+                            .onTapGesture {
+                                showUserNotification = true
+                            }.sheet(isPresented: $showUserNotification) {
+                                NavigationStack {
                                     //                                Notificationpage()
                                 }
                             }
                         
-                                        Image(systemName: "person.circle.fill")
-                                                                    .font(.title2)
-                                                                    .foregroundStyle(.black)
-                                                                    .onTapGesture {
-                                                                        showUserProfile = true
-                                                                    }.sheet(isPresented: $showUserProfile) {
-                                                                        NavigationStack {
-                                    //                                ProfilePage()
-                                                                            UserProfileView()
-                                                                        }
+                        Image(systemName: "person.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(.black)
+                            .onTapGesture {
+                                showUserProfile = true
+                            }.sheet(isPresented: $showUserProfile) {
+                                NavigationStack {
+                                //                                ProfilePage()
+                                ProfileView()
+                                }
                             }
                     }
                 }
@@ -222,80 +222,6 @@ class BooksViewModel: ObservableObject {
 }
 
 
-
-//
-//struct UserBookDetailView: View {
-//    let book: Book
-//    @State private var isLiked = false
-//    @ObservedObject var wishlistManager: WishlistManager
-//    
-//    var body: some View {
-//        ScrollView {
-//            VStack(alignment: .leading, spacing: 20) {
-//                // Book Cover
-//                if let coverImageUrl = book.coverImageUrl,
-//                   let url = URL(string: coverImageUrl) {
-//                    AsyncImage(url: url) { image in
-//                        image.resizable()
-//                            .aspectRatio(contentMode: .fit)
-//                    } placeholder: {
-//                        ProgressView()
-//                    }
-//                    .frame(height: 300)
-//                    .cornerRadius(10)
-//                }
-//                
-//                // Book Title and Author
-//                VStack(alignment: .leading, spacing: 8) {
-//                    Text(book.title)
-//                        .font(.title)
-//                        .fontWeight(.bold)
-//                    
-//                    Text(book.authors.joined(separator: ", "))
-//                        .foregroundColor(.secondary)
-//                }
-//                
-//                // Action Buttons
-//                HStack {
-//                    Button(action: {
-//                        if isLiked {
-//                            wishlistManager.removeFromWishlist(bookId: book.id)
-//                        } else {
-//                            wishlistManager.addToWishlist(bookId: book.id)
-//                        }
-//                        isLiked.toggle()
-//                    }) {
-//                        Image(systemName: isLiked ? "heart.fill" : "heart")
-//                            .foregroundColor(isLiked ? .red : .gray)
-//                            .padding()
-//                            .background(Color(.systemGray6))
-//                            .cornerRadius(10)
-//                    }
-//                    
-//                    Spacer()
-//                    
-//                    Button(action: {}) {
-//                        Text("Borrow")
-//                            .foregroundColor(.white)
-//                            .padding()
-//                            .background(Color.blue)
-//                            .cornerRadius(10)
-//                    }
-//                }
-//            }
-//            .padding()
-//        }
-//        .navigationTitle(book.title)
-//        .navigationBarTitleDisplayMode(.inline)
-//        .onAppear {
-//            wishlistManager.checkIfBookIsInWishlist(bookId: book.id) { isInWishlist in
-//                self.isLiked = isInWishlist
-//            }
-//        }
-//    }
-//}
-
-// Helper Detail Row View
 struct DetailRow: View {
     let icon: String
     let label: String

@@ -72,7 +72,7 @@ struct EachEventView: View {
                 EventInfoRow(
                     icon: "person.3",
                     title: "Attendees",
-                    value: "\(event.attendeesCount) Registered"
+                    value: "20 Registered"
                 )
                 
                 // Action Buttons
@@ -161,20 +161,20 @@ struct EventInfoRow: View {
 }
 
 // Preview for development
-struct EachEventView_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationView {
-            EachEventView(event: EventModel(
-                id: "1",
-                title: "Book Reading Session",
-                description: "Join us for an exciting book reading session with local authors.",
-                coverImage: "",
-                startTime: Date(),
-                endTime: Date().addingTimeInterval(3600),
-                eventType: "Book Club",
-                isLive: true,
-                attendeesCount: 25
-            ))
-        }
-    }
-}
+//struct EachEventView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        NavigationView {
+//            EachEventView(event: EventModel(
+//                id: "1",
+//                title: "Book Reading Session",
+//                description: "Join us for an exciting book reading session with local authors.",
+//                coverImage: "",
+//                startTime: Date(),
+//                endTime: Date().addingTimeInterval(3600),
+//                eventType: "Book Club",
+//                isLive: true,
+//                attendeesCount: 25
+//            ))
+//        }
+//    }
+//}

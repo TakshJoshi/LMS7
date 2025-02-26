@@ -129,14 +129,15 @@ struct FirebaseAuthView: View {
         
         isAuthenticating = true
         errorMessage = nil
+        let lowercaseEmail = email.lowercased()
         
-        FirebaseAuthManager.shared.signIn(email: email, password: password) { result in
+        FirebaseAuthManager.shared.signIn(email: lowercaseEmail, password: password) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let role):
                     let lowercasedRole = role.lowercased()
                     let selectedRole = userRole.lowercased()
-                    let lowercaseEmail = email.lowercased()
+                    
                     
                     FirebaseAuthManager.shared.verifyUserRole(email: lowercaseEmail, role: selectedRole) { isValid, message in
                         if isValid {

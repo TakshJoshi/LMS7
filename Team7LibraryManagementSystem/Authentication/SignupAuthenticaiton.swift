@@ -4,8 +4,8 @@ import FirebaseFirestore
 import SwiftSMTP
 
 struct SignupAuthentication: View {
-    @State private var fullName = ""
-    @State private var username = ""
+    @State private var firstName = ""
+    @State private var lastName = ""
     @State private var mobileNumber = ""
     @State private var selectedGender = "Male"
     @State private var email = ""
@@ -24,7 +24,7 @@ struct SignupAuthentication: View {
     
     var isEmailValid: Bool { email.range(of: "^[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$", options: .regularExpression) != nil }
     var isPasswordValid: Bool { password.range(of: "^(?=.*[A-Za-z])(?=.*\\d)(?=.*[@$!%*?&#])[A-Za-z\\d@$!%*?&#]{6,}$", options: .regularExpression) != nil }
-    var isUsernameValid: Bool { username.count >= 4 } // 4-char limit for username
+    var isUsernameValid: Bool { lastName.count >= 4 } // 4-char limit for username
     var isMobileValid: Bool { mobileNumber.range(of: "^[0-9]{10}$", options: .regularExpression) != nil }
     var isConfirmPasswordValid: Bool { !confirmPassword.isEmpty && password == confirmPassword }
     var canSignUp: Bool { isEmailValid && isPasswordValid && isUsernameValid && isMobileValid && isConfirmPasswordValid && isAgreed }
@@ -32,16 +32,16 @@ struct SignupAuthentication: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) { // Adjusted spacing here
-                InputFields(placeholder: "Username", text: $username)
-                    .onChange(of: username) { newValue in
+                InputFields(placeholder: "First Name", text: $firstName)
+                    .onChange(of: lastName) { newValue in
                         if newValue.count > 20 { // Set an upper limit if needed
-                            username = String(newValue.prefix(20))
+                            lastName = String(newValue.prefix(20))
                         }
                     }
-                ValidationMessage(text: "Username must be at least 4 characters", isValid: isUsernameValid, isVisible: !username.isEmpty)
+                ValidationMessage(text: "Username must be at least 4 characters", isValid: isUsernameValid, isVisible: !lastName.isEmpty)
                 
                 // Last name is now optional
-                InputFields(placeholder: "Lastname", text: $fullName)
+                InputFields(placeholder: "Last Name", text: $lastName)
                 
                 InputFields(placeholder: "(000) 000-0000", text: $mobileNumber, keyboardType: .numberPad)
                 ValidationMessage(text: "Enter a valid 10-digit mobile number", isValid: isMobileValid, isVisible: !mobileNumber.isEmpty)
@@ -152,13 +152,15 @@ struct SignupAuthentication: View {
             let db = Firestore.firestore()
             let userData: [String: Any] = [
                 "userId": user.uid,
-                "fullName": fullName,
-                "username": username,
+                "firstName": firstName,
+                "lastName": lastName,
                 "mobileNumber": mobileNumber,
                 "gender": selectedGender,
                 "email": lowercasedEmail,
                 "genre":  "NA",
-                "language": "NA"
+                "language": "NA",
+                "role": "user",
+                "isDeleted": false
             ]
             
             // Save user data to Firestore

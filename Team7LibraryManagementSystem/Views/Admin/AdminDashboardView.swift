@@ -156,8 +156,10 @@ struct AdminDashboardView: View {
                         }
                     
                     Image(systemName: "person.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(.black)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 24, height: 24)
+                        .foregroundColor(.blue)
                         .onTapGesture {
                             showProfile = true
                         }

@@ -1,60 +1,78 @@
 import SwiftUI
 import FirebaseFirestore
+import CodeScanner
 
 struct AddIssueBookView: View {
-    @Environment(\ .dismiss) var dismiss
-    @State private var email = ""
-    @State private var isbn13 = ""
-    // @State private var bookTitle = ""
-    @State private var dueDate = Date()
-    @State private var selectedUser: UserProfile?
-    @State private var message = ""
-    
+    @State private var email: String = ""
+    @State private var isbn13: String = ""
+    @State private var dueDate: Date = Date()
+    @State private var isShowingScanner = false
+    @State private var isCalendarVisible = false
+    @State private var message: String = ""
+    var selectedUser: User?
+
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    // User ID Section
+                    // User Email Input
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Email").font(.subheadline).foregroundColor(.gray)
-                        HStack {
-                            TextField("Enter email", text: $email)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                        }
+                        TextField("Enter email", text: $email)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
                     }
                     
-                    // Display User Details if found
+                    // User Details if found
                     if let user = selectedUser {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Name: \(user.firstName) \(user.lastName)").bold()
                             Text("Email: \(user.email)")
-                            Text("Date of Birth: \(user.dob)")
                         }
                         .padding()
                         .background(Color(.systemGray6))
                         .cornerRadius(10)
                     }
                     
-                    // Book Details
+                    // Book Details with Scanner
                     VStack(alignment: .leading, spacing: 8) {
                         Text("ISBN-13").font(.subheadline).foregroundColor(.gray)
-                        TextField("Enter ISBN-13", text: $isbn13)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                        HStack {
+                            TextField("Enter ISBN-13", text: $isbn13)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                            Button(action: {
+                                isShowingScanner = true
+                            }) {
+                                Image(systemName: "barcode.viewfinder")
+                                    .font(.title)
+                                    .foregroundColor(.blue)
+                            }
+                        }
                     }
-                    
-                    //                    VStack(alignment: .leading, spacing: 8) {
-                    //                        Text("Book Title").font(.subheadline).foregroundColor(.gray)
-                    //                        TextField("Enter book title", text: $bookTitle)
-                    //                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                    //                    }
-                    
+
+                    // Due Date Picker
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Select due date").font(.subheadline).foregroundColor(.gray)
-                        DatePicker("", selection: $dueDate, displayedComponents: [.date])
-                            .labelsHidden()
-                            .datePickerStyle(GraphicalDatePickerStyle())
+                        HStack {
+                            Text("Select Due Date").font(.subheadline).foregroundColor(.gray)
+                            Spacer()
+                            Text(dueDate, style: .date) // Display selected date on right
+                                .font(.subheadline)
+                                .foregroundColor(.blue)
+                                .onTapGesture {
+                                    withAnimation {
+                                        isCalendarVisible.toggle() // Show calendar on tap
+                                    }
+                                }
+                        }
+                        .padding(.vertical, 8)
+
+                        if isCalendarVisible {
+                            DatePicker("", selection: $dueDate, in: Date()..., displayedComponents: [.date]) // Prevent past dates
+                                .labelsHidden()
+                                .datePickerStyle(GraphicalDatePickerStyle())
+                        }
                     }
-                    
+
+                    // Issue Book Button
                     Button(action: issueBook) {
                         Text("Issue Book")
                             .frame(maxWidth: .infinity)
@@ -63,18 +81,113 @@ struct AddIssueBookView: View {
                             .foregroundColor(.white)
                             .cornerRadius(10)
                     }
-                    
+
                     Text(message).foregroundColor(.red)
                 }
                 .padding()
             }
+            
             .navigationTitle("Issue Book")
-            .toolbar {
-                //
+//            .background(Color(.systemGroupedBackground))
+            .sheet(isPresented: $isShowingScanner) {
+                CodeScannerView(codeTypes: [.ean13, .ean8], simulatedData: "9781234567890") { result in
+                    switch result {
+                    case .success(let code):
+                        isbn13 = code.string
+                        isShowingScanner = false
+                    case .failure(let error):
+                        message = "Scan failed: \(error.localizedDescription)"
+                        isShowingScanner = false
+                    }
+                }
             }
         }
     }
-    
+
+//struct AddIssueBookView: View {
+//    @Environment(\.dismiss) var dismiss
+//    @State private var email = ""
+//    @State private var isbn13 = ""
+//    @State private var dueDate = Date()
+//    @State private var selectedUser: UserProfile?
+//    @State private var message = ""
+//    @State private var isShowingScanner = false // Scanner sheet trigger
+//
+//    var body: some View {
+//        NavigationView {
+//            ScrollView {
+//                VStack(spacing: 24) {
+//                    // User Email Input
+//                    VStack(alignment: .leading, spacing: 8) {
+//                        Text("Email").font(.subheadline).foregroundColor(.gray)
+//                        TextField("Enter email", text: $email)
+//                            .textFieldStyle(RoundedBorderTextFieldStyle())
+//                    }
+//
+//                    // User Details if found
+//                    if let user = selectedUser {
+//                        VStack(alignment: .leading, spacing: 8) {
+//                            Text("Name: \(user.firstName) \(user.lastName)").bold()
+//                            Text("Email: \(user.email)")
+//                        }
+//                        .padding()
+//                        .background(Color(.systemGray6))
+//                        .cornerRadius(10)
+//                    }
+//
+//                    // Book Details with Scanner
+//                    VStack(alignment: .leading, spacing: 8) {
+//                        Text("ISBN-13").font(.subheadline).foregroundColor(.gray)
+//                        HStack {
+//                            TextField("Enter ISBN-13", text: $isbn13)
+//                                .textFieldStyle(RoundedBorderTextFieldStyle())
+//                            Button(action: {
+//                                isShowingScanner = true
+//                            }) {
+//                                Image(systemName: "barcode.viewfinder")
+//                                    .font(.title)
+//                                    .foregroundColor(.blue)
+//                            }
+//                        }
+//                    }
+//
+//                    // Due Date Picker
+//                    VStack(alignment: .leading, spacing: 8) {
+//                        Text("Select due date").font(.subheadline).foregroundColor(.gray)
+//                        DatePicker("", selection: $dueDate, displayedComponents: [.date])
+//                            .labelsHidden()
+//                            .datePickerStyle(GraphicalDatePickerStyle())
+//                    }
+//
+//                    // Issue Book Button
+//                    Button(action: issueBook) {
+//                        Text("Issue Book")
+//                            .frame(maxWidth: .infinity)
+//                            .padding()
+//                            .background(Color.blue)
+//                            .foregroundColor(.white)
+//                            .cornerRadius(10)
+//                    }
+//
+//                    Text(message).foregroundColor(.red)
+//                }
+//                .padding()
+//            }
+//            .navigationTitle("Issue Book")
+//            .sheet(isPresented: $isShowingScanner) {
+//                CodeScannerView(codeTypes: [.ean13, .ean8], simulatedData: "9781234567890") { result in
+//                    switch result {
+//                    case .success(let code):
+//                        isbn13 = code.string
+//                        isShowingScanner = false
+//                    case .failure(let error):
+//                        message = "Scan failed: \(error.localizedDescription)"
+//                        isShowingScanner = false
+//                    }
+//                }
+//            }
+//        }
+//    }
     
     func isRegisteredUser(email: String, completion: @escaping (Bool) -> Void) {
         let db = Firestore.firestore()
@@ -170,3 +283,6 @@ struct AddIssueBookView: View {
 }
 
 
+#Preview{
+    AddIssueBookView()
+}
