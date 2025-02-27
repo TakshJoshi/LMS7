@@ -19,6 +19,7 @@ struct Library: Identifiable, Codable {
     let staff: Staff
     let features: Features
     let createdAt: Timestamp
+    let coverImageUrl: String?  // Add this property for image storage
 }
 
 struct Address: Codable {

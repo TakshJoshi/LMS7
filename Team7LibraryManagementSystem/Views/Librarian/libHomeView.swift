@@ -74,7 +74,7 @@ struct libHomeView: View {
                                 .fontWeight(.bold)
                                 .padding(.horizontal)
 
-                            // Library Card
+                            // Updated Library Card with image support
                             LibraryDetailCard(library: library)
                                 .padding(.horizontal)
                         }
@@ -85,6 +85,7 @@ struct libHomeView: View {
                                 .foregroundColor(.gray)
                         }
                         .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.vertical, 30)
                     }
 
 //                  12   Recent Activities
@@ -147,7 +148,7 @@ struct libHomeView: View {
                             }
                             .sheet(isPresented: $showNotification) {
                                 NavigationStack {
-                                    NotificationsView()
+                                    LibNotificationsView()
                                 }
                             }
 
@@ -268,7 +269,8 @@ struct libHomeView: View {
                     settings: settings,
                     staff: staff,
                     features: features,
-                    createdAt: data["createdAt"] as? Timestamp ?? Timestamp()
+                    createdAt: data["createdAt"] as? Timestamp ?? Timestamp(),
+                    coverImageUrl: data["coverImageUrl"] as? String ?? ""
                 )
                 
                 DispatchQueue.main.async {
@@ -547,24 +549,57 @@ struct LibraryActivity: Identifiable {
 //}
 struct LibraryDetailCard: View {
     let library: Library
+    @State private var decodedImage: UIImage? = nil
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // Use a placeholder image or implement image fetching
-            Image("library.background")
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(height: 150)
-                .clipped()
-                .cornerRadius(12)
-                .background(Color(.systemGray6))
-            
+            // Image handling with priority: decoded base64 > URL > placeholder
+            ZStack {
+                if let decodedImage = decodedImage {
+                    // Display decoded base64 image
+                    Image(uiImage: decodedImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(height: 150)
+                        .clipped()
+                } else if let coverImageUrl = library.coverImageUrl, !coverImageUrl.isEmpty, !coverImageUrl.hasPrefix("data:image") {
+                    // Display image from URL
+                    AsyncImage(url: URL(string: coverImageUrl)) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        case .empty, .failure:
+                            // Placeholder when image can't be loaded
+                            Image(systemName: "building.2")
+                                .font(.system(size: 40))
+                                .foregroundColor(.gray)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .background(Color(.systemGray6))
+                        @unknown default:
+                            ProgressView()
+                        }
+                    }
+                    .frame(height: 150)
+                } else {
+                    // Fallback placeholder image
+                    Image(systemName: "building.2")
+                        .font(.system(size: 40))
+                        .foregroundColor(.gray)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color(.systemGray6))
+                        .frame(height: 150)
+                }
+            }
+            .cornerRadius(12)
             
             NavigationLink(destination: EachLibraryView(library: library)) {
-                VStack {
+                VStack(alignment: .leading) {
                     Text(library.name)
                         .font(.title3)
                         .fontWeight(.bold)
+                        .foregroundColor(.primary)
                     
                     HStack {
                         Image(systemName: "location.fill")
@@ -574,14 +609,30 @@ struct LibraryDetailCard: View {
                     }
                     .font(.subheadline)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 4)
             }
-            
-            
         }
         .padding(.top, 8)
+        .onAppear {
+            // Try to decode base64 image when the view appears
+            decodeBase64Image()
+        }
+    }
+    
+    // Decode base64 image if present in library.coverImageUrl
+    private func decodeBase64Image() {
+        if let coverImageUrl = library.coverImageUrl,
+           coverImageUrl.starts(with: "data:image") || coverImageUrl.hasPrefix("data:image") {
+            // Extract base64 part after comma
+            let components = coverImageUrl.components(separatedBy: ",")
+            if components.count > 1,
+               let imageData = Data(base64Encoded: components[1]) {
+                decodedImage = UIImage(data: imageData)
+            }
+        }
     }
 }
-
 #Preview {
     libHomeView()
 }

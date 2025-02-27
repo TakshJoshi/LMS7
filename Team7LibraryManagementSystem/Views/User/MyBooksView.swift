@@ -12,15 +12,17 @@ struct MyBooksView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     LazyVGrid(columns: columns, spacing: 16) {
                         ForEach(issuedBooks, id: \.id) { book in
-                            MyBookCardView(
-                                imageName: book.coverImageUrl ?? "default_cover",
-                                title: book.title,
-                                author: book.authors.first ?? "Unknown Author",
-                                description: book.description ?? "No description available.",
-                                status: book.status,
-                                statusColor: getStatusColor(for: book.status),
-                                fine: book.status == "Overdue" ? "₹50" : nil
-                            )
+                            NavigationLink(destination: UserBookDetailView(isbn13: book.isbn13 ?? "-1")) {
+                                MyBookCardView(
+                                    imageUrl: book.coverImageUrl,
+                                    title: book.title,
+                                    author: book.authors.first ?? "Unknown Author",
+                                    description: book.description ?? "No description available.",
+                                    status: book.status,
+                                    statusColor: getStatusColor(for: book.status),
+                                    fine: book.status == "Overdue" ? "₹50" : nil
+                                )
+                            }
                         }
                     }
                     .padding(.horizontal)
@@ -33,81 +35,7 @@ struct MyBooksView: View {
             }
         }
     }
-//
-//    private func fetchIssuedBookISBNs() {
-//        let db = Firestore.firestore()
-//        guard let userEmail = Auth.auth().currentUser?.email else {
-//            print("No logged-in user found")
-//            return
-//        }
-//
-//        var allBooksData: [(String, String)] = []
-//        let dispatchGroup = DispatchGroup()
-//
-//        // Fetch issued books
-//        dispatchGroup.enter()
-//        db.collection("issued_books").whereField("email", isEqualTo: userEmail).getDocuments { snapshot, error in
-//            if let error = error {
-//                print("Error fetching issued book ISBNs: ", error)
-//            } else {
-//                let issuedBooksData = snapshot?.documents.compactMap { doc -> (String, String)? in
-//                    if let isbn = doc.data()["isbn13"] as? String,
-//                       let status = doc.data()["status"] as? String {
-//                        return (isbn, status)
-//                    }
-//                    return nil
-//                } ?? []
-//
-//                allBooksData.append(contentsOf: issuedBooksData)
-//            }
-//            dispatchGroup.leave()
-//        }
-//
-//        // Fetch prebooked books
-//        dispatchGroup.enter()
-//        db.collection("PreBook").whereField("userEmail", isEqualTo: userEmail).getDocuments { snapshot, error in
-//            if let error = error {
-//                print("Error fetching prebooked books: ", error)
-//            } else {
-//                let prebookedBooksData = snapshot?.documents.compactMap { doc -> (String, String)? in
-//                    if let isbn = doc.data()["isbn13"] as? String,
-//                       var prebookStatus = doc.data()["status"] as? String,
-//                       let expiresAtTimestamp = doc.data()["expiresAt"] as? Timestamp {
-//
-//                        let currentTime = Timestamp(date: Date())
-//
-//                        // Check if expiresAt time has passed
-//                        if expiresAtTimestamp.seconds < currentTime.seconds && prebookStatus != "Confirmed" {
-//                            prebookStatus = "Time Over"
-//                            updatePreBookStatusToTimeOver(forEmail: userEmail, libraryId: <#T##String#>, completion: <#T##(Bool, Error?) -> Void#>)
-//                        } else {
-//                            // Determine display status based on prebook status
-//                            switch prebookStatus {
-//                            case "Pending":
-//                                prebookStatus = "PreBooked"
-//                            case "Confirmed":
-//                                prebookStatus = "PreBook Confirmed"
-//                            default:
-//                                prebookStatus = "Unknown"
-//                            }
-//                        }
-//
-//                        return (isbn, prebookStatus)
-//                    }
-//                    return nil
-//                } ?? []
-//
-//                allBooksData.append(contentsOf: prebookedBooksData)
-//            }
-//            dispatchGroup.leave()
-//        }
-//
-//        // Once both issued and prebooked books are fetched, retrieve their details
-//        dispatchGroup.notify(queue: .main) {
-//            fetchBookDetails(allBooksData)
-//        }
-//    }
-//
+
 
     private func fetchIssuedBookISBNs() {
         let db = Firestore.firestore()
@@ -259,6 +187,9 @@ struct MyBooksView: View {
                 // Get status from issuedBooksData
                 let status = issuedBooksData.first(where: { $0.0 == isbn })?.1 ?? "Unknown"
                 
+                // Get coverImageUrl - this could be a regular URL or base64 string
+                let coverImageUrl = data["coverImageUrl"] as? String
+                
                 return Book(
                     id: data["bookId"] as? String ?? UUID().uuidString,
                     title: data["title"] as? String ?? "Unknown Title",
@@ -268,7 +199,7 @@ struct MyBooksView: View {
                     description: data["description"] as? String,
                     pageCount: data["pageCount"] as? Int,
                     categories: data["categories"] as? [String],
-                    coverImageUrl: data["coverImageUrl"] as? String,
+                    coverImageUrl: coverImageUrl, // This could be base64 or regular URL
                     isbn13: isbn,
                     language: data["language"] as? String,
                     quantity: data["quantity"] as? Int ?? 0,
@@ -308,7 +239,7 @@ struct MyBooksView: View {
 
     
     struct MyBookCardView: View {
-        var imageName: String
+        var imageUrl: String? // Changed from imageName to imageUrl to better reflect what it is
         var title: String
         var author: String
         var description: String
@@ -316,14 +247,53 @@ struct MyBooksView: View {
         var statusColor: Color
         var fine: String? = nil
         
+        // State for decoded image
+        @State private var decodedImage: UIImage? = nil
+        
         var body: some View {
             VStack(alignment: .leading) {
-                Image(imageName)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(maxWidth: .infinity, minHeight: 180, maxHeight: 180) // Ensuring equal width
+                // Cover image handling both remote URLs and base64
+                if let decodedImage = decodedImage {
+                    // Show decoded base64 image
+                    Image(uiImage: decodedImage)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: .infinity, minHeight: 180, maxHeight: 180)
+                        .cornerRadius(10)
+                        .padding(.horizontal, 10)
+                } else if let imageUrl = imageUrl, !imageUrl.isEmpty {
+                    // Show remote image or handle placeholder
+                    AsyncImage(url: URL(string: imageUrl)) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFit()
+                        case .empty, .failure:
+                            // Placeholder when image can't be loaded
+                            Image(systemName: "book.fill")
+                                .resizable()
+                                .scaledToFit()
+                                .padding(40)
+                                .foregroundColor(.gray.opacity(0.5))
+                        @unknown default:
+                            ProgressView()
+                        }
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 180, maxHeight: 180)
                     .cornerRadius(10)
-                    .padding(.horizontal, 10) // Equal left and right padding
+                    .padding(.horizontal, 10)
+                } else {
+                    // Placeholder when no image is available
+                    Image(systemName: "book.fill")
+                        .resizable()
+                        .scaledToFit()
+                        .padding(40)
+                        .frame(maxWidth: .infinity, minHeight: 180, maxHeight: 180)
+                        .cornerRadius(10)
+                        .foregroundColor(.gray.opacity(0.5))
+                        .padding(.horizontal, 10)
+                }
                 
                 Text(title)
                     .font(.headline)
@@ -361,11 +331,28 @@ struct MyBooksView: View {
                     }
                 }
             }
-            .frame(maxWidth: .infinity) // Ensuring equal width for all cards
+            .frame(maxWidth: .infinity)
             .padding()
             .background(Color.white)
             .cornerRadius(12)
-            .shadow(color: Color.black.opacity(0.530), radius: 2, x: 0, y: 1)
+            .shadow(color: Color.black.opacity(0.3), radius: 2, x: 0, y: 1)
+            .onAppear {
+                // Try to decode base64 image if available
+                decodeBase64Image()
+            }
+        }
+        
+        // Decode base64 image if present in imageUrl
+        private func decodeBase64Image() {
+            if let imageUrl = imageUrl,
+               imageUrl.starts(with: "data:image") || imageUrl.hasPrefix("data:image") {
+                // Extract base64 part after comma
+                let components = imageUrl.components(separatedBy: ",")
+                if components.count > 1,
+                   let imageData = Data(base64Encoded: components[1]) {
+                    decodedImage = UIImage(data: imageData)
+                }
+            }
         }
     }
 }

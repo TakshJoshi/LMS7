@@ -20,6 +20,12 @@ struct UserHomeView: View {
                     Text("My Books")
                 }
             
+            UserSearchView()
+                .tabItem {
+                    Image(systemName: "magnifyingglass")
+                    Text("Search Books")
+                }
+            
             WishlistView()
                 .tabItem {
                     Image(systemName: "heart.fill")
@@ -44,27 +50,30 @@ struct HomeScreen: View {
     @State private var showUserNotification = false
     @State private var showSearchView = false
     
+//    @State var events: [EventModel] = []
+//    @State private var isLoading = false
+    
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     // Search Bar
-                    NavigationLink(destination: UserSearchView()) {
-                        HStack {
-                            Image(systemName: "magnifyingglass")
-                                .foregroundColor(.gray)
-                                .padding(.leading, 10)
-                            
-                            Text("Search")
-                                .foregroundColor(.gray)
-                                .padding(5)
-                        }
-                        .padding(1)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(10)
-                    }
-                    .padding(.horizontal)
+//                    NavigationLink(destination: UserSearchView()) {
+//                        HStack {
+//                            Image(systemName: "magnifyingglass")
+//                                .foregroundColor(.gray)
+//                                .padding(.leading, 10)
+//
+//                            Text("Search")
+//                                .foregroundColor(.gray)
+//                                .padding(5)
+//                        }
+//                        .padding(1)
+//                        .frame(maxWidth: .infinity, alignment: .leading)
+//                        .background(Color(.systemGray6))
+//                        .cornerRadius(10)
+//                    }
+//                    .padding(.horizontal)
                     
                     // Books You May Like Section
                     if booksViewModel.isLoading {
@@ -98,24 +107,24 @@ struct HomeScreen: View {
                     HStack(spacing: 8) {
                         Image(systemName: "bell")
                             .font(.title3)
-                            .foregroundStyle(.black)
+                            .foregroundStyle(.blue)
                             .onTapGesture {
                                 showUserNotification = true
                             }.sheet(isPresented: $showUserNotification) {
                                 NavigationStack {
-                                    //                                Notificationpage()
+                                    LibrarianNotificationsView()
                                 }
                             }
                         
                         Image(systemName: "person.circle.fill")
                             .font(.title2)
-                            .foregroundStyle(.black)
+                            .foregroundStyle(.blue)
                             .onTapGesture {
                                 showUserProfile = true
                             }.sheet(isPresented: $showUserProfile) {
                                 NavigationStack {
                                 //                                ProfilePage()
-                                ProfileView()
+                                UserProfileView()
                                 }
                             }
                     }
@@ -124,6 +133,130 @@ struct HomeScreen: View {
             }
         }
     }
+    
+//    var body: some View {
+//          NavigationStack {
+//              ScrollView {
+//                  VStack(alignment: .leading, spacing: 12) {
+//                      // 🔹 Events Carousel (Fetching from Firestore)
+//                      if isLoading {
+//                          ProgressView().frame(maxWidth: .infinity)
+//                      } else if events.isEmpty {
+//                          Text("No Events Available")
+//                              .foregroundColor(.gray)
+//                              .frame(maxWidth: .infinity)
+//                      } else {
+//                          ScrollView(.horizontal, showsIndicators: false) {
+//                              HStack(spacing: 12) {
+//                                  ForEach(events) { event in
+//                                      EventCard(event: event) // 🔥 Custom Card for each event
+//                                  }
+//                              }
+//                              .padding(.horizontal)
+//                          }
+//                          .padding(.top, 10)
+//                      }
+//
+//                      // 🔹 Books You May Like Section
+//                      if booksViewModel.isLoading {
+//                          ProgressView().frame(maxWidth: .infinity)
+//                      } else {
+//                          BooksSection(title: "Books You May Like", books: recommendedBooks)
+//
+//                          QuoteCard(
+//                              text: "A reader lives a thousand lives before he dies.",
+//                              author: "George R.R. Martin"
+//                          ).padding(.horizontal)
+//
+//                          BooksSection(title: "Trending Books", books: trendingBooks)
+//                      }
+//                  }
+//                  .padding(.top)
+//                  .onAppear {
+//                      booksViewModel.fetchBooks()
+//                      fetchEvents() // 🔥 Fetch events on screen load
+//                  }
+//                  .navigationTitle("HOME")
+//                  .toolbar {
+//                      HStack(spacing: 8) {
+//                          Image(systemName: "bell")
+//                              .font(.title3)
+//                              .foregroundStyle(.black)
+//                              .onTapGesture { showUserNotification = true }
+//                              .sheet(isPresented: $showUserNotification) { NavigationStack { } }
+//
+//                          Image(systemName: "person.circle.fill")
+//                              .font(.title2)
+//                              .foregroundStyle(.black)
+//                              .onTapGesture { showUserProfile = true }
+//                              .sheet(isPresented: $showUserProfile) { NavigationStack { ProfileView() } }
+//                      }
+//                  }
+//              }
+//          }
+//      }
+    
+//
+//    func fetchEvents() {
+//       let now = Date()
+//       let db = Firestore.firestore()
+//       isLoading = true
+//
+//       db.collection("events")
+//           .whereField("status", isEqualTo: "Live")
+//           .getDocuments { snapshot, error in
+//               guard let documents = snapshot?.documents else {
+//                   print("Error fetching events: \(error?.localizedDescription ?? "Unknown error")")
+//                   return
+//               }
+//               isLoading = false
+//
+//             //  var events: [EventModel] = []
+//               var spacesUsed = 0
+//
+//               for doc in documents {
+//                   let data = doc.data()
+//                   let id = doc.documentID
+//                   let title = data["title"] as? String ?? "No Title"
+//                   let description = data["description"] as? String ?? "No Description"
+//                   let coverImage = data["coverImage"] as? String ?? ""
+//                   let startTime = (data["startDateTime"] as? Timestamp)?.dateValue() ?? Date()
+//                   let endTime = (data["endDateTime"] as? Timestamp)?.dateValue() ?? Date()
+//                   let eventType = data["eventType"] as? String ?? "Other"
+//                   let location = data["location"] as? String ?? "Unknown"
+//                   let notifyMembers = data["notifyMembers"] as? Bool ?? false
+//                   let status = data["status"] as? String ?? ""
+//
+//                   // Fetch only ongoing (Live) or upcoming events
+//                   if endTime > now {
+//                       let eventItem = EventModel(
+//                           id: id,
+//                           title: title,
+//                           description: description,
+//                           coverImage: coverImage,
+//                           startTime: startTime,
+//                           endTime: endTime,
+//                           eventType: eventType,
+//                           location: location,
+//                           notifyMembers: notifyMembers,
+//                           status: status
+//                       )
+//
+//                       events.append(eventItem)
+//                       print(events.count)
+//                       spacesUsed += 1
+//                   }
+//               }
+//
+////               DispatchQueue.main.async {
+////                   liveEvents = events
+////                   activeEventsCount = "\(events.count)"
+////                   spacesInUse = "\(spacesUsed)"
+////               }
+//           }
+//    }
+  
+
     
     // Computed property for recommended books
     private var recommendedBooks: [Book] {
@@ -140,6 +273,43 @@ struct HomeScreen: View {
             .map { $0 }
     }
 }
+
+
+//struct EventCard: View {
+//    let event: EventModel
+//
+//    var body: some View {
+//        ZStack(alignment: .bottomLeading) {
+//            // Load Image from Firebase URL or use Placeholder
+//            AsyncImage(url: URL(string: event.coverImage ?? "")) { image in
+//                image.resizable()
+//            } placeholder: {
+//                Image(systemName: "calendar")
+//                    .resizable()
+//                    .scaledToFit()
+//                    .frame(width: 100, height: 100)
+//                    .foregroundColor(.black0)
+//            }
+//            .scaledToFill()
+//            .frame(width: 300, height: 150)
+//            .clipShape(RoundedRectangle(cornerRadius: 12))
+//
+//            // Gradient Overlay
+//            LinearGradient(gradient: Gradient(colors: [.black.opacity(0.8), .clear]),
+//                           startPoint: .bottom,
+//                           endPoint: .center)
+//                .frame(height: 50)
+//                .clipShape(RoundedRectangle(cornerRadius: 12))
+//
+//            // Event Title
+//            Text(event.title)
+//                .font(.headline)
+//                .foregroundColor(.white)
+//                .padding()
+//        }
+//        .frame(width: 300, height: 150)
+//    }
+//}
 
 // Books Section View
 struct BooksSection: View {
@@ -164,6 +334,8 @@ struct BooksSection: View {
         }
     }
 }
+
+
 
 // Books View Model
 class BooksViewModel: ObservableObject {
@@ -321,24 +493,6 @@ struct UserBookCard: View {
 }
 
 
-struct MyBooksScreen: View {
-    var body: some View {
-        VStack {
-            Text("My Books")
-                .font(.largeTitle)
-            
-            NavigationLink(destination: UserBookDetailView2(title: "Book 1", author: "Author 1")) {
-                Text("Go to Book Detail")
-                    .foregroundColor(.blue)
-                    .padding()
-                    .background(Color.gray.opacity(0.2))
-                    .cornerRadius(8)
-            }
-        }
-        .navigationTitle("My Books")
-    }
-}
-
 struct QuoteCard: View {
     let text: String
     let author: String
@@ -366,37 +520,9 @@ struct QuoteCard: View {
 
 
 
-struct EventsScreen: View {
-    var body: some View {
-        VStack {
-            Text("Events")
-                .font(.largeTitle)
-        }
-        .navigationTitle("Events")
-    }
-}
 
-// Book Detail Screen
-struct UserBookDetailView2: View {
-    let title: String
-    let author: String
-    
-    var body: some View {
-        VStack {
-            Text(title)
-                .font(.title)
-                .fontWeight(.bold)
-            
-            Text("By \(author)")
-                .font(.subheadline)
-                .foregroundColor(.gray)
-            
-            Spacer()
-        }
-        .padding()
-        .navigationTitle(title)
-    }
-}
+
+
 
 // Preview
 struct HomeView_Previews: PreviewProvider {

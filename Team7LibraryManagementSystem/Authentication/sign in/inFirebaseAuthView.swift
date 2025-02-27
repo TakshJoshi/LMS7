@@ -18,7 +18,8 @@ struct FirebaseAuthView: View {
     @State private var showForgotPassword = false
     @StateObject private var networkMonitor = NetworkMonitor.shared
     @State private var showNetworkAlert = false
-    
+    @State private var isPasswordVisible = false
+
     
     
     var body: some View {
@@ -48,11 +49,32 @@ struct FirebaseAuthView: View {
                 .cornerRadius(10)
                 .padding(.horizontal)
             
-            SecureField("Password", text: $password)
-                .padding()
-                .background(Color(.systemGray6))
-                .cornerRadius(10)
-                .padding(.horizontal)
+            ZStack(alignment: .trailing) {
+                if isPasswordVisible {
+                    // Show regular TextField when password is visible
+                    TextField("Password", text: $password)
+                        .autocapitalization(.none)
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(10)
+                } else {
+                    // Show SecureField when password is hidden
+                    SecureField("Password", text: $password)
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(10)
+                }
+                
+                // Eye button
+                Button(action: {
+                    isPasswordVisible.toggle()
+                }) {
+                    Image(systemName: isPasswordVisible ? "eye.slash.fill" : "eye.fill")
+                        .foregroundColor(.gray)
+                }
+                .padding(.trailing, 20)
+            }
+            .padding(.horizontal)
             
             if let errorMessage = errorMessage {
                 Text(errorMessage)

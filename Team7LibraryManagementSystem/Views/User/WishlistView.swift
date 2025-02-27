@@ -15,12 +15,13 @@ struct WishlistView: View {
                             .padding()
                     } else {
                         ForEach(books, id: \.id) { book in
-                            
-                            NavigationLink(destination: BookDetailView(book: book)) {
-                                WishlistItemView(book: book)
-                                    .padding(.horizontal)
-                                    .padding(.vertical, 6) // Adds space between cards
-                            } // Adds space between cards
+                            NavigationLink(destination: UserBookDetailView(isbn13: book.isbn13 ?? "-1")) {
+                                WishlistItemView(book: book, removeAction: {
+                                    removeFromWishlist(bookId: book.id)
+                                })
+                            }
+                            .padding(.horizontal)
+                            .padding(.vertical, 6)
                         }
                     }
                 }
@@ -34,10 +35,8 @@ struct WishlistView: View {
     }
     
     private func fetchBooksFromWishlist() {
-      //  let userId = "3vdPNzYHz3T7k6fqbmGrkLondNz2" // Hardcoded for now
-        var userId: String {
-            UserDefaults.standard.string(forKey: "userId") ?? ""
-        }
+        let userId = UserDefaults.standard.string(forKey: "userId") ?? ""
+        
         db.collection("wishlist")
             .whereField("userId", isEqualTo: userId)
             .getDocuments { snapshot, error in
@@ -91,52 +90,97 @@ struct WishlistView: View {
                 }
             }
     }
+    
+    // 🔥 Remove Book from Wishlist
+    private func removeFromWishlist(bookId: String) {
+        let userId = UserDefaults.standard.string(forKey: "userId") ?? ""
+        let wishlistRef = db.collection("wishlist")
+        let query = wishlistRef
+            .whereField("userId", isEqualTo: userId)
+            .whereField("bookId", isEqualTo: bookId)
+        
+        query.getDocuments { snapshot, error in
+            if let error = error {
+                print("❌ Error finding wishlist entry: \(error)")
+                return
+            }
+            
+            guard let document = snapshot?.documents.first else {
+                print("⚠️ Wishlist entry not found")
+                return
+            }
+            
+            wishlistRef.document(document.documentID).delete { error in
+                if let error = error {
+                    print("❌ Error removing from wishlist: \(error)")
+                } else {
+                    DispatchQueue.main.async {
+                        self.books.removeAll { $0.id == bookId } // ✅ Remove book from local list
+                        print("✅ Book \(bookId) removed from wishlist")
+                    }
+                }
+            }
+        }
+    }
 }
 
+// 🔹 Wishlist Card View
 struct WishlistItemView: View {
     var book: Book
+    var removeAction: () -> Void
     
     var body: some View {
         VStack(alignment: .leading) {
-            HStack(spacing: 8) {
-                // Placeholder Image (Replace with AsyncImage if fetching from URL)
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.gray.opacity(0.2))
-                    .frame(width: 80, height: 110)
-                
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(book.title)
-                        .font(.headline)
-                        .foregroundColor(.black)
+            ZStack(alignment: .topTrailing) { // 🔥 Keep cross inside the card
+                HStack(spacing: 8) {
+                    // ✅ Placeholder Image (Replace with AsyncImage if fetching from URL)
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color.gray.opacity(0.2))
+                        .frame(width: 80, height: 110)
                     
-                    Text(book.authors.joined(separator: ", "))
-                        .font(.subheadline)
-                        .foregroundColor(.gray)
-                    
-                    Text(book.description ?? "")
-                        .font(.footnote)
-                        .foregroundColor(.black)
-                        .lineLimit(2)
-                    
-                    Button(action: {
-                        // Preview action
-                    }) {
-                        HStack {
-                            Image(systemName: "book.fill")
-                            Text("Preview")
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(book.title)
+                            .font(.headline)
+                            .foregroundColor(.black)
+                        
+                        Text(book.authors.joined(separator: ", "))
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                        
+                        Text(book.description ?? "")
+                            .font(.footnote)
+                            .foregroundColor(.black)
+                            .lineLimit(2)
+                        
+                        Button(action: {
+                            // Preview action
+                        }) {
+                            HStack {
+                                Image(systemName: "book.fill")
+                                Text("Preview")
+                            }
+                            .font(.footnote)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.blue.opacity(0.2))
+                            .foregroundColor(.blue)
+                            .cornerRadius(12)
                         }
-                        .font(.footnote)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Color.blue.opacity(0.2))
-                        .foregroundColor(.blue)
-                        .cornerRadius(12)
                     }
+                    
+                    Spacer()
                 }
+                .padding()
                 
-                Spacer()
+                // 🔹 Subtle Grey Cross Button
+                Button(action: removeAction) {
+                    Image(systemName: "xmark.circle") // 🔥 Subtle cross
+                        .foregroundColor(.gray) // 🔥 Grey color
+                        .font(.caption) // 🔥 Smaller size
+                        .opacity(0.6) // 🔥 Less intrusive
+                }
+                .padding(6)
             }
-            .padding()
             
             HStack {
                 VStack(alignment: .leading) {
@@ -166,6 +210,7 @@ struct WishlistItemView: View {
     }
 }
 
+// 🔹 Preview
 struct Wishlist_Previews: PreviewProvider {
     static var previews: some View {
         WishlistView()

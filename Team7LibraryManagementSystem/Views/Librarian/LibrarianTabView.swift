@@ -30,7 +30,7 @@ struct LibrarianTabView: View {
                         Label("Events", systemImage: "calendar")
                     }
                 
-                libUsersView()
+                LibraryUsersView()
                     .tabItem {
                         Label("Users", systemImage: "person")
                     }
