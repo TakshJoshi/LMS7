@@ -33,51 +33,47 @@ struct LiveEventsView: View {
         }
     }
     
+   
     var body: some View {
-        NavigationView {
-            VStack (spacing: 0){
-                // Stats Header
-                HStack(alignment: .center, spacing: 15) {
-                    StatCard(icon: "", title: activeEventsCount, subtitle: "Active Events", color: .blue)
-                    StatCard(icon: "", title: totalAttendeesCount, subtitle: "Attendees", color: .green)
-                    StatCard(icon: "", title: spacesInUse, subtitle: "Spaces in Use", color: .red)
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 0) {
+                    // Stats Header
+                    HStack(alignment: .center, spacing: 15) {
+                        StatCard(icon: "", title: activeEventsCount, subtitle: "Active Events", color: .blue)
+                        StatCard(icon: "", title: spacesInUse, subtitle: "Spaces in Use", color: .red)
+                    }
+                    .padding()
+                    .padding(.bottom, 15)
+                    .padding(.top, 25)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 150)
+                    .background(Color(.systemBackground))
                     
-                }
-                .padding()
-                .padding(.bottom, 15)
-                .padding(.top, 25)
-                .frame(maxWidth: .infinity)
-                .frame(height: 150)
-                .background(Color(.systemBackground))
-                
-                // Category Filter
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack {
-                        ForEach(categories, id: \.self) { category in
-                            CategoryButton(category: category, selectedCategory: $selectedCategory)
+                    // Live Events Content
+                    if filteredEvents.isEmpty {
+                        // Empty State
+                        VStack {
+                            Image(systemName: "calendar.badge.exclamationmark")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 100, height: 100)
+                                .foregroundColor(.gray)
+                            Text("No live events")
+                                .foregroundColor(.gray)
                         }
-                    }
-                    .padding(.horizontal)
-                }
-                
-                // Live Events List
-                if filteredEvents.isEmpty {
-                                    // Empty State
-                    VStack {
-                        Image(systemName: "calendar.badge.exclamationmark")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 100, height: 100)
-                            .foregroundColor(.gray)
-                        Text("No live events")
-                            .foregroundColor(.gray)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 50)
+                    } else {
+                        // Events using ForEach instead of List
+                        VStack(spacing: 12) {
+                            ForEach(filteredEvents) { eventItem in
+                                EventRow(eventItem: eventItem)
+                                    .padding(.horizontal)
+                            }
                         }
-                        .frame(maxWidth: .infinity, maxHeight:.infinity)
-                } else {
-                    List(filteredEvents) { eventItem in
-                        EventRow(eventItem: eventItem)
+                        .padding(.top, 16)
                     }
-                    .listStyle(PlainListStyle())
                 }
             }
             .navigationTitle("Live Events")
@@ -94,7 +90,6 @@ struct LiveEventsView: View {
             }
         }
     }
-
     // Fetch Events from Firebase Firestore
     private func fetchEvents() {
         let now = Date()

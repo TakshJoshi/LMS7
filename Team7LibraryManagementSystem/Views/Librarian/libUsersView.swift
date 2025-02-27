@@ -25,11 +25,12 @@ struct LibraryUsersView: View {
 //    }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
+            ScrollView {
             VStack(spacing: 0) {
                 // Search bar
                 TextField("Search users...", text: $searchText)
-                    .padding()
+                    .padding(8)
                     .background(Color(.systemGray6))
                     .cornerRadius(10)
                     .padding(.horizontal)
@@ -46,33 +47,34 @@ struct LibraryUsersView: View {
                 }
                 .padding()
                 
-                // Recent users section
+                // Recent users section header
                 HStack {
                     Text("Recent Users")
                         .font(.title2)
                         .fontWeight(.bold)
                     Spacer()
-                    //                    NavigationLink(destination: UserProfileViewLibrarian(userID: userId)) {
-                    //                        Text("See All")
-                    //                            .foregroundColor(.blue)
-                    //                    }
-                    //                }
-                    //                .padding(.horizontal)
-                    
-                    // User list
-                    
+                    // Your "See All" button if needed
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 16)
+                
+                // User list - now correctly outside the HStack
+                
+                    LazyVStack(spacing: 12) {
                         ForEach(viewModel.filteredUsers) { user in
-                            NavigationLink(destination: UserProfileViewLibrarian(userID: user.id) ) {
+                            NavigationLink(destination: UserProfileViewLibrarian(userID: user.id)) {
                                 UserRowView(user: user)
                             }
                         }
-                    
-                    .listStyle(PlainListStyle())
+                    }
+                    .padding(.horizontal)
                 }
-                .navigationTitle("Library Users")
-                .onAppear {
-                    viewModel.fetchUsers()
-                }
+                
+            }
+            .padding(.top)
+            .navigationTitle("Library Users")
+            .onAppear {
+                viewModel.fetchUsers()
             }
         }
     }
