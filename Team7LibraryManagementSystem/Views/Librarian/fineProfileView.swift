@@ -353,7 +353,123 @@ struct UserProfileViewLibrarian: View {
     @Environment(\.colorScheme) private var colorScheme
     
     @State private var showDeleteConfirmation = false
-7
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                // User Profile Header
+                VStack(spacing: 16) {
+                    // User Avatar
+                    Image(systemName: "person.circle.fill")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 80, height: 80)
+                        .foregroundColor(.blue)
+                    
+                    VStack(spacing: 4) {
+                        Text(userName)
+                            .font(.title2)
+                            .fontWeight(.bold)
+                        
+                        Text(userEmail)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 24)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color(.systemBackground))
+                        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+                )
+                .padding(.horizontal)
+                
+                // Fine Card
+                VStack(spacing: 10) {
+                    HStack {
+                        Image(systemName: "dollarsign.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(totalFine > 0 ? .red : .green)
+                        
+                        Text("Total Imposed Fine")
+                            .font(.headline)
+                    }
+                    
+                    Text("$\(totalFine, specifier: "%.2f")")
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .foregroundColor(totalFine > 0 ? .red : .green)
+                        .padding(.bottom, 4)
+                    
+                    if totalFine > 0 {
+                        Text("Please pay at the library counter")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("No pending fine")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 20)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color(.systemBackground))
+                        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+                )
+                .padding(.horizontal)
+                
+                // Borrowed Books Section
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack {
+                        Text("Borrowed Books")
+                            .font(.title3)
+                            .fontWeight(.bold)
+                        
+                        Spacer()
+                        
+                        Text("\(borrowedBooks.count) books")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal)
+                    
+                    if borrowedBooks.isEmpty {
+                        VStack(spacing: 12) {
+                            Image(systemName: "books.vertical")
+                                .font(.system(size: 40))
+                                .foregroundColor(.secondary.opacity(0.5))
+                            
+                            Text("No books borrowed")
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 40)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                        )
+                        .padding(.horizontal)
+                    } else {
+                        ForEach(borrowedBooks) { book in
+                            BookCardLibrarian(book: book, returnAction: {
+                                returnBook(email: userEmail, isbn: book.isbn)
+                            })
+                        }
+                    }
+                }
+            }
+            .padding(.vertical)
+        }
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .navigationTitle("User Fine")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            fetchUserData()
+        }
+    }
     
     
 //    var body: some View {
