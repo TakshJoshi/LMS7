@@ -398,12 +398,12 @@ struct libUsersView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 // Header
-                Text("Library Users")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding()
-                    .background(Color.white)
+//                Text("Library Users")
+//                    .font(.title2)
+//                    .fontWeight(.bold)
+//                    .frame(maxWidth: .infinity, alignment: .leading)
+//                    .padding()
+//                    .background(Color.white)
                 
                 if userManager.isLoading {
                     ProgressView()
@@ -428,7 +428,7 @@ struct libUsersView: View {
                                     }
                                 }
                             }
-                            .padding()
+                            .padding(8)
                             .background(Color(.systemGray6))
                             .cornerRadius(10)
                             .padding(.horizontal)
@@ -482,6 +482,7 @@ struct libUsersView: View {
                     }
                 }
             }
+            .navigationTitle("Library Users")
             .onAppear {
                 userManager.fetchUsers()
             }

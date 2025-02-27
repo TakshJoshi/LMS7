@@ -23,37 +23,7 @@ struct libHomeView: View {
     @State private var preBookItems: [PreBookItem] = []
     @State private var assignedLibrary: Library? = nil
     @State private var libraryImage: UIImage? = nil
-    @State private var recentActivities: [LibraryActivity] = [
-        
-        LibraryActivity(
-            icon: "book.fill",
-            title: "Book Checkout",
-            userName: "Emma Wilson",
-            timeAgo: "2m ago",
-            status: .completed
-        ),
-        LibraryActivity(
-            icon: "book.fill",
-            title: "Book Return",
-            userName: "James Chen",
-            timeAgo: "15m ago",
-            status: .completed
-        ),
-        LibraryActivity(
-            icon: "dollarsign.circle.fill",
-            title: "Fine Payment",
-            userName: "Sarah Miller",
-            timeAgo: "1h ago",
-            status: .completed
-        ),
-        LibraryActivity(
-            icon: "person.fill",
-            title: "New Registration",
-            userName: "Alex Johnson",
-            timeAgo: "2h ago",
-            status: .pending
-        )
-    ]
+
     
     var body: some View {
 
@@ -117,7 +87,7 @@ struct libHomeView: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                     }
 
-                    // Recent Activities
+//                  12   Recent Activities
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Pre-Book Requests")
                             .font(.title2)
@@ -131,6 +101,37 @@ struct libHomeView: View {
                         }
                         .padding(.horizontal)
                     }
+                    
+//                    VStack(alignment: .leading, spacing: 16) {
+//                        Text("Pre-Book Requests")
+//                            .font(.title2)
+//                            .fontWeight(.bold)
+//                            .padding(.horizontal)
+//
+//                        VStack {
+//                            if preBookItems.isEmpty {
+//                                // Show message when there are no requests
+//                                Text("No requests")
+//                                    .foregroundColor(.gray)
+//                                    .frame(maxWidth: .infinity, minHeight: 100) // Fixed height for uniformity
+//                                    .background(Color(.systemGray6))
+//                                    .cornerRadius(10)
+//                                    .padding(.horizontal)
+//                            } else {
+//                                // List of pre-book requests
+//                                VStack(spacing: 12) {
+//                                    ForEach(preBookItems) { preBook in
+//                                        PreBookRequestRow(preBook: preBook)
+//                                            .padding()
+//                                            .background(Color(.systemGray6))
+//                                            .cornerRadius(10)
+//                                    }
+//                                }
+//                                .padding(.horizontal)
+//                            }
+//                        }
+//                        .padding(.horizontal)
+//                    }
                 }
                 .padding(.vertical)
             }
@@ -172,6 +173,7 @@ struct libHomeView: View {
         }
 
     }
+    
     private func fetchAssignedLibrary() {
         guard let currentUser = Auth.auth().currentUser else {
             print("No user logged in")

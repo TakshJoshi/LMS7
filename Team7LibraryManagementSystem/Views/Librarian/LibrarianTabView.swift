@@ -22,7 +22,7 @@ struct LibrarianTabView: View {
                 
                 AddIssueBookView()
                     .tabItem {
-                        Label("Issue Book", systemImage: "book")
+                        Label("Issue Book", systemImage: "bookmark.fill")
                     }
                 
                 LiveEventsView()

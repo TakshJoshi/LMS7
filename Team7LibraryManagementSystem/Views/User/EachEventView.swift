@@ -1,27 +1,31 @@
-//
-//  SwiftUIView.swift
-//  Team7LibraryManagementSystem
-//
-//  Created by Taksh Joshi on 25/02/25.
-//
 import SwiftUI
 import FirebaseFirestore
 
 struct EachEventView: View {
     let event: EventModel
+    @State private var decodedImage: UIImage? = nil
     
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 // Header Image and Title
                 ZStack(alignment: .bottomLeading) {
-                    // Event Cover Image (placeholder for now)
-                    Image(systemName: "photo.fill")
-                        .resizable()
-                        .scaledToFill()
-                        .frame(height: 200)
-                        .clipped()
-                        .foregroundColor(.gray)
+                    // Event Cover Image from base64
+                    if let image = decodedImage {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(height: 200)
+                            .clipped()
+                    } else {
+                        // Placeholder when no image is available
+                        Image(systemName: "photo.fill")
+                            .resizable()
+                            .scaledToFill()
+                            .frame(height: 200)
+                            .clipped()
+                            .foregroundColor(.gray)
+                    }
                     
                     HStack {
                         Text(event.title)
@@ -68,12 +72,22 @@ struct EachEventView: View {
                     value: event.eventType
                 )
                 
-                // Attendees Information
+                // Status Information
                 EventInfoRow(
-                    icon: "person.3",
-                    title: "Attendees",
-                    value: "20 Registered"
+                    icon: "circle.fill",
+                    title: "Status",
+                    value: event.status,
+                    valueColor: event.status == "Live" ? .green : .gray
                 )
+                
+                // Location Information
+                if !event.location.isEmpty {
+                    EventInfoRow(
+                        icon: "mappin.and.ellipse",
+                        title: "Location",
+                        value: event.location
+                    )
+                }
                 
                 // Action Buttons
                 VStack(spacing: 12) {
@@ -100,6 +114,18 @@ struct EachEventView: View {
         }
         .navigationTitle("Event Details")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            decodeBase64Image()
+        }
+    }
+    
+    // Function to decode base64 image
+    private func decodeBase64Image() {
+        if let base64String = event.coverImage,
+           !base64String.isEmpty,
+           let imageData = Data(base64Encoded: base64String) {
+            decodedImage = UIImage(data: imageData)
+        }
     }
     
     // Formatted Event Type
@@ -135,6 +161,7 @@ struct EventInfoRow: View {
     let icon: String
     let title: String
     let value: String
+    var valueColor: Color = .primary
     
     var body: some View {
         HStack {
@@ -148,6 +175,7 @@ struct EventInfoRow: View {
                     .foregroundColor(.gray)
                 Text(value)
                     .font(.body)
+                    .foregroundColor(valueColor)
             }
             
             Spacer()
@@ -159,22 +187,3 @@ struct EventInfoRow: View {
         .padding(.horizontal)
     }
 }
-
-// Preview for development
-//struct EachEventView_Previews: PreviewProvider {
-//    static var previews: some View {
-//        NavigationView {
-//            EachEventView(event: EventModel(
-//                id: "1",
-//                title: "Book Reading Session",
-//                description: "Join us for an exciting book reading session with local authors.",
-//                coverImage: "",
-//                startTime: Date(),
-//                endTime: Date().addingTimeInterval(3600),
-//                eventType: "Book Club",
-//                isLive: true,
-//                attendeesCount: 25
-//            ))
-//        }
-//    }
-//}

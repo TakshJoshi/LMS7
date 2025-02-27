@@ -2,17 +2,6 @@ import SwiftUI
 import FirebaseFirestore
 
 
-//struct EventModel: Identifiable {
-//    var id: String
-//    var title: String
-//    var description: String
-//    var coverImage: String
-//    var startTime: Date
-//    var endTime: Date
-//    var eventType: String
-//    var isLive: Bool
-//    var attendeesCount: Int
-//}
 struct LiveEventsView: View {
     @State private var liveEvents: [EventModel] = []
     @State private var selectedCategory: String = "All"
@@ -109,22 +98,20 @@ struct LiveEventsView: View {
     // Fetch Events from Firebase Firestore
     private func fetchEvents() {
         let now = Date()
-        
+
         db.collection("events")
-            .whereField("endDateTime", isGreaterThan: now)
-            .addSnapshotListener { snapshot, error in
+            .whereField("status", isEqualTo: "Live")
+            .getDocuments { snapshot, error in
                 guard let documents = snapshot?.documents else {
                     print("Error fetching events: \(error?.localizedDescription ?? "Unknown error")")
                     return
                 }
                 
                 var events: [EventModel] = []
-                var totalAttendees = 0
                 var spacesUsed = 0
                 
                 for doc in documents {
                     let data = doc.data()
-                    
                     let id = doc.documentID
                     let title = data["title"] as? String ?? "No Title"
                     let description = data["description"] as? String ?? "No Description"
@@ -132,43 +119,34 @@ struct LiveEventsView: View {
                     let startTime = (data["startDateTime"] as? Timestamp)?.dateValue() ?? Date()
                     let endTime = (data["endDateTime"] as? Timestamp)?.dateValue() ?? Date()
                     let eventType = data["eventType"] as? String ?? "Other"
-                    let isLive = true // Since we're filtering by endDateTime
-                    let attendeesCount = data["attendeesCount"] as? Int ?? 0
-                    if(isLive){
-                        eventStatus = "Live"
-                    } else {
-                        eventStatus = "Ended"
+                    let location = data["location"] as? String ?? "Unknown"
+                    let notifyMembers = data["notifyMembers"] as? Bool ?? false
+                    let status = data["status"] as? String ?? ""
+
+                    // Fetch only ongoing (Live) or upcoming events
+                    if endTime > now {
+                        let eventItem = EventModel(
+                            id: id,
+                            title: title,
+                            description: description,
+                            coverImage: coverImage,
+                            startTime: startTime,
+                            endTime: endTime,
+                            eventType: eventType,
+                            location: location,
+                            notifyMembers: notifyMembers,
+                            status: status
+                        )
+                        
+                        events.append(eventItem)
+                        spacesUsed += 1
                     }
-                    
-                    let eventItem = EventModel(
-                        id: id,
-                        title: title,
-                        description: description,
-                        coverImage: coverImage,
-                        startTime: startTime,
-                        endTime: endTime,
-                        eventType: eventType,
-                       // coverImage: coverImage,
-                        location: " ",
-                        notifyMembers: false,
-                       
-                        status: eventStatus
-                      //  isLive: isLive,
-                       // attendeesCount: attendeesCount
-                    )
-                    
-                    events.append(eventItem)
-                    totalAttendees += attendeesCount
-                    spacesUsed += 1
                 }
                 
                 DispatchQueue.main.async {
                     self.liveEvents = events
                     self.activeEventsCount = "\(events.count)"
-                    self.totalAttendeesCount = "\(totalAttendees)"
                     self.spacesInUse = "\(spacesUsed)"
-                    
-                    print("Filtered Events Count: \(events.count)")
                 }
             }
     }
@@ -226,16 +204,34 @@ struct CategoryButton: View {
     }
 }
 
-// Event Row UI
-// Event Row UI
-import SwiftUI
 
 struct EventRow: View {
     let eventItem: EventModel
-
+    @State private var decodedImage: UIImage? = nil
+    
     var body: some View {
         NavigationLink(destination: EachEventView(event: eventItem)) {
             HStack {
+                // Image from base64
+                if let image = decodedImage {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 70, height: 70)
+                        .cornerRadius(8)
+                        .clipped()
+                } else {
+                    // Placeholder when no image is available
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.3))
+                        .frame(width: 70, height: 70)
+                        .cornerRadius(8)
+                        .overlay(
+                            Image(systemName: "photo")
+                                .foregroundColor(.gray)
+                        )
+                }
+                
                 VStack(alignment: .leading, spacing: 4) {
                     Text(eventItem.title)
                         .font(.headline)
@@ -247,17 +243,23 @@ struct EventRow: View {
                 
                 Spacer()
                 
-                HStack {
+                // Live status indicator
+                if eventItem.status == "Live" {
                     Text("● Live")
                         .font(.caption)
                         .foregroundColor(.green)
-                    
-                    
+                } else {
+                    Text("● \(eventItem.status)")
+                        .font(.caption)
+                        .foregroundColor(.gray)
                 }
             }
             .padding()
             .background(Color(.systemBackground))
             
+        }
+        .onAppear {
+            decodeBase64Image()
         }
     }
 
@@ -265,6 +267,15 @@ struct EventRow: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM d, h:mm a"
         return formatter.string(from: date)
+    }
+    
+    // Function to decode base64 image
+    private func decodeBase64Image() {
+        if let base64String = eventItem.coverImage,
+           !base64String.isEmpty,
+           let imageData = Data(base64Encoded: base64String) {
+            decodedImage = UIImage(data: imageData)
+        }
     }
 }
 struct LiveEventsView_Previews: PreviewProvider {
