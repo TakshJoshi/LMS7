@@ -155,16 +155,16 @@ struct WishlistItemView: View {
                         Button(action: {
                             // Preview action
                         }) {
-                            HStack {
-                                Image(systemName: "book.fill")
-                                Text("Preview")
-                            }
-                            .font(.footnote)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.blue.opacity(0.2))
-                            .foregroundColor(.blue)
-                            .cornerRadius(12)
+//                            HStack {
+//                                Image(systemName: "book.fill")
+//                                Text("Preview")
+//                            }
+//                            .font(.footnote)
+//                            .padding(.horizontal, 12)
+//                            .padding(.vertical, 6)
+//                            .background(Color.blue.opacity(0.2))
+//                            .foregroundColor(.blue)
+//                            .cornerRadius(12)
                         }
                     }
                     
@@ -184,23 +184,23 @@ struct WishlistItemView: View {
             
             HStack {
                 VStack(alignment: .leading) {
-                    Text("Genre")
+                    Text("")
                         .font(.footnote)
                         .foregroundColor(.gray)
-                    Text("Fiction")
+                    Text("")
                         .font(.subheadline)
                         .foregroundColor(.black)
                 }
                 
                 Spacer()
                 
-                Image(systemName: "chevron.right")
-                    .foregroundColor(.gray)
+//                Image(systemName: "chevron.right")
+//                    .foregroundColor(.gray)
             }
             .padding(.horizontal)
             .padding(.bottom, 10)
             
-            Divider()
+            //Divider()
         }
         .background(Color.white)
         .cornerRadius(12)

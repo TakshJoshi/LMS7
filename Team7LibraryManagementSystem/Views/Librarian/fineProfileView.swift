@@ -54,7 +54,9 @@ struct UserProfileViewLibrarian: View {
                         .padding(.horizontal)
 
                     ForEach(borrowedBooks, id: \.isbn) { book in
-                        BookCardLibrarian(book: book)
+                        BookCardLibrarian(book: book, returnAction: {
+                                                  returnBook(email: userEmail, isbn: book.isbn)
+                                              })
                     }
                 }
                 .padding(.top, 10)
@@ -66,6 +68,59 @@ struct UserProfileViewLibrarian: View {
             fetchUserData()
         }
     }
+    
+    func returnBook(email: String, isbn: String) {
+           let db = Firestore.firestore()
+
+           db.collection("issued_books")
+               .whereField("email", isEqualTo: email)
+               .whereField("isbn13", isEqualTo: isbn)
+               .getDocuments { snapshot, error in
+                   guard let documents = snapshot?.documents, !documents.isEmpty, error == nil else {
+                       print("❌ Error finding issued book: \(error?.localizedDescription ?? "Unknown error")")
+                       return
+                   }
+
+                   for document in documents {
+                       document.reference.updateData(["status": "Returned"]) { error in
+                           if let error = error {
+                               print("❌ Error updating book status: \(error.localizedDescription)")
+                           } else {
+                               print("✅ Book marked as Returned!")
+
+                               // Update Available Quantity
+                               updateBookAvailability(isbn: isbn, db: db)
+                           }
+                       }
+                   }
+               }
+       }
+
+       // Update Book Availability
+       func updateBookAvailability(isbn: String, db: Firestore) {
+           db.collection("books")
+               .whereField("isbn13", isEqualTo: isbn)
+               .getDocuments { snapshot, error in
+                   guard let document = snapshot?.documents.first, error == nil else {
+                       print("❌ Error fetching book for quantity update: \(error?.localizedDescription ?? "Unknown error")")
+                       return
+                   }
+
+                   let currentQuantity = document.data()["availableQuantity"] as? Int ?? 0
+
+                   document.reference.updateData(["availableQuantity": currentQuantity + 1]) { error in
+                       if let error = error {
+                           print("❌ Error updating available quantity: \(error.localizedDescription)")
+                       } else {
+                           print("✅ Book quantity updated successfully!")
+
+                           DispatchQueue.main.async {
+                               self.borrowedBooks.removeAll { $0.isbn == isbn }
+                           }
+                       }
+                   }
+               }
+       }
 
     // Fetch User Email using `userId`
     func fetchUserEmail(userID: String, completion: @escaping (String?) -> Void) {
@@ -230,7 +285,7 @@ struct LibraryBookLibrarian: Identifiable {
 // MARK: - BookCardLibrarian View
 struct BookCardLibrarian: View {
     var book: LibraryBookLibrarian
-
+    var returnAction: () -> Void
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: book.image)
@@ -253,9 +308,10 @@ struct BookCardLibrarian: View {
             }
             Spacer()
 
-            Button(action: {
+            Button(action:
+                returnAction
                 // Handle return book action
-            }) {
+            ) {
                 Text("Return")
                     .font(.subheadline)
                     .fontWeight(.bold)
@@ -273,6 +329,9 @@ struct BookCardLibrarian: View {
         .padding(.horizontal, 10)
     }
 }
+
+
+
 
 // MARK: - Preview
 struct UserProfileViewLibrarian_Previews: PreviewProvider {
